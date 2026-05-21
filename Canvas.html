@@ -3,413 +3,739 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>협업 캔버스 프로젝트</title>
-    <!-- Supabase 클라이언트 라이브러리 로드 -->
+    <title>SaaS Live Workspace v2.4</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* 모던 SaaS 스타일 CSS 초기화 및 변수 설정 */
         :root {
-            --bg-color: #f8fafc;
-            --surface: #ffffff;
-            --primary: #2563eb;
-            --primary-hover: #1d4ed8;
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --border: #e2e8f0;
-            --danger: #ef4444;
-            --danger-hover: #dc2626;
-            --success: #10b981;
-            --secondary: #475569;
+            --bg-base: #fefce8; 
+            --bg-surface: #ffffff;
+            --color-primary: #facc15; 
+            --color-primary-hover: #eab308;
+            --color-text-main: #0f172a;
+            --color-text-muted: #64748b;
+            --color-border: #fef08a; 
+            --color-danger: #ef4444;
+            --color-success: #10b981;
+            --color-secondary: #fef9c3; 
         }
 
-        body {
-            margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden;
-        }
+        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background-color: var(--bg-base); color: var(--color-text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-        /* --- 공통 컴포넌트 --- */
-        input {
-            width: 100%; padding: 10px 12px; margin-bottom: 12px; border: 1px solid var(--border); 
-            border-radius: 6px; box-sizing: border-box; font-size: 14px; outline: none; transition: border-color 0.2s;
-        }
-        input:focus { border-color: var(--primary); }
+        input, textarea { width: 100%; padding: 12px; margin-bottom: 14px; border: 2px solid var(--color-border); border-radius: 8px; box-sizing: border-box; font-size: 14px; outline: none; transition: 0.2s; }
+        input:focus, textarea:focus { border-color: var(--color-primary); }
         
-        button {
-            padding: 10px 16px; border: none; border-radius: 6px; font-weight: 600; font-size: 14px; 
-            cursor: pointer; transition: background-color 0.2s, color 0.2s;
-        }
-        .btn-primary { background-color: var(--primary); color: white; width: 100%; }
-        .btn-primary:hover { background-color: var(--primary-hover); }
-        .btn-danger { background-color: var(--danger); color: white; }
-        .btn-danger:hover { background-color: var(--danger-hover); }
-        .btn-secondary { background-color: var(--border); color: var(--text-main); }
-        .btn-secondary:hover { background-color: #cbd5e1; }
-        .btn-success { background-color: var(--success); color: white; }
+        button { padding: 10px 18px; border: none; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .btn-primary { background-color: var(--color-primary); color: var(--color-text-main); width: 100%; }
+        .btn-primary:hover { background-color: var(--color-primary-hover); }
+        .btn-danger { background-color: var(--color-danger); color: white; }
+        .btn-secondary { background-color: var(--color-secondary); color: var(--color-text-main); border: 1px solid var(--color-border); }
+        .btn-secondary:hover { background-color: #fde047; }
+        .hidden { display: none !important; }
 
-        /* --- 0. 인증 오버레이 --- */
-        #authOverlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
-            display: flex; justify-content: center; align-items: center; z-index: 9999;
-        }
-        .auth-box {
-            background: var(--surface); padding: 40px; border-radius: 12px; width: 340px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-        }
-        .auth-box h2 { margin: 0 0 24px 0; font-size: 20px; font-weight: 700; text-align: center; }
-        .auth-toggle { font-size: 13px; color: var(--text-muted); cursor: pointer; text-align: center; margin-top: 16px; }
-        .auth-toggle:hover { color: var(--text-main); text-decoration: underline; }
-        #loginForm { display: block; } #signupForm { display: none; }
+        #authOverlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(8px); display: flex; justify-content: center; align-items: center; z-index: 9999; }
+        .auth-card { background: var(--bg-surface); padding: 40px; border-radius: 16px; width: 340px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); border-top: 6px solid var(--color-primary); }
+        .auth-card h2 { margin: 0 0 24px 0; font-size: 24px; font-weight: 800; text-align: center; }
+        .auth-toggle { font-size: 13px; color: var(--color-text-muted); cursor: pointer; text-align: center; margin-top: 16px; font-weight: 600; }
+        .auth-toggle:hover { color: var(--color-text-main); text-decoration: underline; }
 
-        /* --- 1. 대시보드 로비 --- */
-        #lobbyScreen { display: none; flex-direction: column; align-items: center; padding: 60px 20px; flex: 1; overflow-y: auto; }
-        .lobby-header { text-align: center; margin-bottom: 48px; }
-        .lobby-header h1 { font-size: 28px; margin: 0 0 12px 0; font-weight: 800; letter-spacing: -0.5px; }
-        .user-badge { background: var(--secondary); color: white; padding: 6px 12px; border-radius: 16px; font-size: 13px; font-weight: 600; display: inline-block; }
+        .consent-box { font-size: 12px; margin-bottom: 15px; padding: 10px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; color: #475569; }
+        .consent-box label { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; line-height: 1.4; }
+        .consent-box input { width: auto; margin: 0; }
+
+        #lobbyScreen { display: none; flex-direction: column; padding: 0; flex: 1; overflow-y: auto; }
         
-        .lobby-content { display: flex; gap: 24px; width: 100%; max-width: 800px; align-items: flex-start; }
-        .panel { background: var(--surface); padding: 24px; border-radius: 12px; border: 1px solid var(--border); flex: 1; }
-        .panel h3 { margin: 0 0 20px 0; font-size: 16px; font-weight: 600; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+        .lobby-nav { background: var(--bg-surface); padding: 16px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--color-border); position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .lobby-nav h1 { margin: 0; font-size: 24px; font-weight: 800; color: var(--color-text-main); }
+        .nav-actions { display: flex; gap: 12px; align-items: center; }
+        .user-badge { background: var(--color-secondary); color: var(--color-text-main); padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 700; border: 1px solid var(--color-border); display: flex; align-items: center; gap: 6px; }
+        .admin-badge { background: var(--color-danger); color: white; padding: 2px 6px; border-radius: 8px; font-size: 11px; }
         
-        .room-item {
-            display: flex; justify-content: space-between; align-items: center; padding: 16px; 
-            border: 1px solid var(--border); border-radius: 8px; margin-bottom: 12px; transition: border-color 0.2s;
-        }
-        .room-item:hover { border-color: var(--primary); }
-        .room-title { font-weight: 600; font-size: 15px; color: var(--text-main); }
-        .room-meta { font-size: 12px; color: var(--text-muted); margin-left: 8px; font-weight: 400; }
-        .status-badge { font-size: 11px; padding: 2px 6px; border-radius: 4px; margin-left: 6px; font-weight: 600; }
-        .status-private { background: #fee2e2; color: #b91c1c; }
-        .status-public { background: #e0e7ff; color: #4338ca; }
+        #adminPanelBtn { display: none; background: #0f172a; color: white; width: auto; padding: 10px 24px; white-space: nowrap !important; flex-shrink: 0; } 
 
-        /* --- 2. 메인 워크스페이스 --- */
+        .dashboard-grid { display: grid; grid-template-columns: 3fr 1fr; gap: 30px; padding: 40px; max-width: 1400px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+        .section-title { font-size: 20px; font-weight: 800; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        
+        .room-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .room-card { background: var(--bg-surface); padding: 24px; border-radius: 16px; border: 2px solid var(--color-border); transition: 0.3s; display: flex; flex-direction: column; justify-content: space-between; min-height: 140px; }
+        .room-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-color: var(--color-primary); }
+        .room-card .title { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+        .room-card .creator-info { font-size: 12px; color: var(--color-text-muted); margin-bottom: 12px; }
+        .room-card .meta { font-size: 13px; color: var(--color-text-muted); margin-bottom: 12px; }
+        
+        .side-panel { display: flex; flex-direction: column; gap: 20px; }
+        .info-box { background: var(--bg-surface); padding: 24px; border-radius: 16px; border: 2px solid var(--color-border); }
+        .info-box h3 { margin: 0 0 16px 0; font-size: 16px; font-weight: 800; border-bottom: 2px solid var(--color-border); padding-bottom: 12px; }
+        .info-list { margin: 0; padding-left: 20px; font-size: 14px; color: var(--color-text-main); line-height: 1.6; white-space: pre-line; }
+        
+        .best-artwork-box { width: 100%; height: 180px; background: #ffffff; border-radius: 12px; display: flex; justify-content: center; align-items: center; overflow: hidden; border: 2px solid var(--color-primary); position: relative; }
+        .best-artwork-box img { width: 100%; height: 100%; object-fit: cover; }
+
         #mainWorkspace { display: none; flex-direction: column; height: 100vh; }
-        #toolbar {
-            padding: 12px 24px; background: var(--surface); border-bottom: 1px solid var(--border);
-            display: flex; align-items: center; gap: 12px; flex-wrap: wrap; box-shadow: 0 1px 2px rgba(0,0,0,0.05); z-index: 10;
-        }
-        .toolbar-divider { width: 1px; height: 24px; background: var(--border); margin: 0 8px; }
-        .tool-group { display: flex; align-items: center; gap: 8px; }
-        
-        #workspaceContent { display: flex; flex: 1; overflow: hidden; background: var(--bg-color); }
+        #toolbar { padding: 12px 24px; background: var(--bg-surface); border-bottom: 2px solid var(--color-border); display: flex; align-items: center; gap: 12px; }
+        .toolbar-divider { width: 2px; height: 24px; background: var(--color-border); margin: 0 8px; }
+        #workspaceContent { display: flex; flex: 1; overflow: hidden; background: var(--bg-base); }
         .canvas-container { flex: 1; display: flex; justify-content: center; align-items: center; padding: 24px; overflow: auto; }
-        canvas { background: white; border-radius: 4px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); cursor: crosshair; touch-action: none; border: 1px solid var(--border); }
-
-        /* --- 3. 채팅 UI --- */
-        .chat-container { width: 320px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; }
-        .chat-header { padding: 16px; border-bottom: 1px solid var(--border); font-weight: 600; font-size: 14px; color: var(--text-main); }
+        canvas { background: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); cursor: crosshair; touch-action: none; border: 2px solid var(--color-border); }
+        
+        .chat-container { width: 320px; background: var(--bg-surface); border-left: 2px solid var(--color-border); display: flex; flex-direction: column; }
+        .chat-header { padding: 18px; border-bottom: 2px solid var(--color-border); font-weight: 800; background: var(--color-secondary); }
         .chat-messages { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
-        .chat-msg { font-size: 13px; line-height: 1.5; color: var(--text-main); }
-        .chat-msg b { font-weight: 600; color: var(--primary); }
-        .chat-msg.system { color: var(--text-muted); font-size: 12px; text-align: center; background: var(--bg-color); border-radius: 4px; padding: 6px; }
-        .chat-input-area { display: flex; padding: 16px; border-top: 1px solid var(--border); }
-        .chat-input-area input { flex: 1; margin: 0; border-radius: 6px 0 0 6px; }
-        .chat-input-area button { border-radius: 0 6px 6px 0; }
+        .chat-msg { font-size: 13px; line-height: 1.5; padding: 8px 12px; background: #f8fafc; border-radius: 8px; border: 1px solid var(--color-border); }
+        .chat-msg b { font-weight: 800; color: #b45309; }
+        .chat-input-area { display: flex; padding: 16px; border-top: 2px solid var(--color-border); }
+        .chat-input-area input { margin: 0; border-radius: 8px 0 0 8px; border-right: none; }
+        .chat-input-area button { border-radius: 0 8px 8px 0; width: auto; }
+
+        .admin-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 10000; }
+        .admin-modal-card { background: white; padding: 30px; border-radius: 16px; width: 700px; max-height: 85vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
+        .admin-section-title { font-size: 18px; font-weight: 800; margin: 20px 0 10px 0; border-left: 4px solid var(--color-primary); padding-left: 10px; }
+        .list-container { max-height: 250px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; }
+        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; background: white; }
     </style>
 </head>
 <body>
 
-    <!-- 0. 인증 -->
     <div id="authOverlay">
-        <div class="auth-box">
+        <div class="auth-card">
             <div id="loginForm">
                 <h2>로그인</h2>
-                <input type="text" id="loginId" placeholder="아이디" autofocus>
+                <input type="email" id="loginEmail" placeholder="이메일 주소">
                 <input type="password" id="loginPw" placeholder="비밀번호">
                 <button class="btn-primary" id="doLoginBtn">로그인</button>
+                <div class="auth-toggle" id="doResetPwBtn">비밀번호를 잊으셨나요?</div>
                 <div class="auth-toggle" id="showSignupBtn">계정이 없으신가요? 회원가입</div>
             </div>
-            <div id="signupForm">
+            <div id="signupForm" style="display: none;">
                 <h2>회원가입</h2>
-                <input type="text" id="signupId" placeholder="아이디">
-                <input type="password" id="signupPw" placeholder="비밀번호">
+                <input type="email" id="signupEmail" placeholder="사용할 이메일 주소">
+                <input type="password" id="signupPw" placeholder="비밀번호 (6자 이상)">
                 <input type="text" id="signupNick" placeholder="닉네임">
-                <button class="btn-primary" id="doSignupBtn" style="background-color: var(--success);">가입 완료</button>
+                
+                <div class="consent-box">
+                    <label>
+                        <input type="checkbox" id="signupConsent">
+                        <span>[필수] 이용약관 동의<br>관리자의 플랫폼 내 활동 모니터링(채팅/작품) 및 운영 원칙 위배 시 계정 차단 조치에 동의합니다.</span>
+                    </label>
+                </div>
+
+                <button class="btn-primary" id="doSignupBtn">가입 완료</button>
                 <div class="auth-toggle" id="showLoginBtn">이미 계정이 있으신가요? 로그인</div>
             </div>
         </div>
     </div>
 
-    <!-- 1. 로비 -->
     <div id="lobbyScreen">
-        <div class="lobby-header">
-            <h1>워크스페이스 로비</h1>
-            <div class="user-badge" id="userGreetingMsg">대기 중</div>
-        </div>
-        <div class="lobby-content">
-            <div class="panel">
-                <h3>새로운 방 생성</h3>
-                <input type="text" id="newRoomName" placeholder="방 이름 입력">
-                <input type="password" id="newRoomPw" placeholder="비밀번호 (선택사항)">
-                <button class="btn-primary" id="createRoomBtn">생성 및 입장</button>
+        <div class="lobby-nav">
+            <h1>Live Workspace</h1>
+            <div class="nav-actions">
+                <div class="user-badge" id="userGreetingMsg">연결 중</div>
+                <button id="adminPanelBtn" class="btn-secondary">관리자 제어판</button>
+                <button class="btn-primary" id="showCreateRoomModalBtn" style="width: auto;">새로운 방 만들기</button>
             </div>
-            <div class="panel" style="flex: 1.5;">
-                <h3>현재 개설된 세션</h3>
-                <div id="roomListContainer"></div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="main-panel">
+                <div class="section-title">
+                    진행 중인 프로젝트 세션
+                    <button class="btn-secondary" style="padding: 6px 12px; font-size: 13px;" id="btnRefreshRooms">새로고침</button>
+                </div>
+                
+                <div id="createRoomForm" class="hidden" style="background: var(--bg-surface); padding: 24px; border-radius: 16px; border: 2px solid var(--color-border); margin-bottom: 24px;">
+                    <h3>방 개설하기</h3>
+                    <input type="text" id="newRoomName" placeholder="방 제목을 입력하세요">
+                    <input type="password" id="newRoomPw" placeholder="비밀번호 (선택)">
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-primary" id="createRoomBtn">개설 및 입장</button>
+                        <button class="btn-secondary" id="cancelCreateBtn">취소</button>
+                    </div>
+                </div>
+                <div id="roomListContainer" class="room-grid"></div>
+            </div>
+
+            <div class="side-panel">
+                <div class="info-box" style="border-color: var(--color-primary); background: var(--bg-base);">
+                    <h3 style="color: #b45309;">이주의 우수 채택작</h3>
+                    <div class="best-artwork-box" id="featuredArtworkContainer">
+                        <span style="color:var(--color-text-muted); font-size:13px;">채택된 작품이 없습니다</span>
+                    </div>
+                    <p style="font-size: 12px; text-align: center; color: var(--color-text-muted); margin: 8px 0 0 0;" id="featuredMeta"></p>
+                </div>
+
+                <div class="info-box">
+                    <h3>공지사항 <button id="editNoticeBtn" class="btn-secondary hidden" style="float:right; padding:2px 8px; font-size:11px;">편집</button></h3>
+                    <div class="info-list" id="noticeContent">로딩 중...</div>
+                </div>
+
+                <div class="info-box">
+                    <h3>사용법 가이드 <button id="editGuideBtn" class="btn-secondary hidden" style="float:right; padding:2px 8px; font-size:11px;">편집</button></h3>
+                    <div class="info-list" id="guideContent">로딩 중...</div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- 2. 워크스페이스 -->
+    <div id="adminModal" class="admin-modal hidden">
+        <div class="admin-modal-card">
+            <h2 style="margin:0 0 10px 0; color:#0f172a;">통합 관리자 제어판</h2>
+            <hr style="border:0; border-top:1px solid #e2e8f0; margin-bottom:20px;">
+            
+            <div class="admin-section-title">가입된 유저 관리 (조회 및 차단)</div>
+            <div id="adminUserList" class="list-container" style="margin-bottom: 20px;"></div>
+
+            <div class="admin-section-title">저장된 유저 작품 및 메인 전시 채택</div>
+            <div id="adminArtworkList" class="list-container"></div>
+            
+            <br>
+            <button class="btn-secondary" id="closeAdminModalBtn" style="width:100%; padding:14px; background:#f1f5f9;">제어판 닫기</button>
+        </div>
+    </div>
+
     <div id="mainWorkspace">
         <div id="toolbar">
-            <button id="exitBtn" class="btn-secondary">로비로 이동</button>
+            <button id="exitBtn" class="btn-secondary">나가기</button>
             <div class="toolbar-divider"></div>
-            
-            <div style="font-weight: 600; font-size: 14px;" id="roomInfoDisplay">방 이름</div>
-            <button id="togglePrivacyBtn" class="btn-secondary" style="margin-left: 8px; font-size: 12px; padding: 6px 10px;">상태: 공개</button>
-            
+            <div style="font-weight: 800; font-size: 15px; color: #b45309;" id="roomInfoDisplay">Workspace</div>
+            <button id="togglePrivacyBtn" class="btn-secondary" style="margin-left: 8px; font-size: 12px; padding: 6px 12px;">상태: 공개</button>
             <div class="toolbar-divider"></div>
-            
-            <div class="tool-group">
-                <input type="color" id="colorPicker" value="#0f172a" style="width: 32px; height: 32px; padding: 0; border: none; cursor: pointer; margin: 0;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <input type="color" id="colorPicker" value="#0f172a" style="width: 36px; height: 36px; padding: 0; border: none; cursor: pointer; margin: 0; border-radius: 8px;">
                 <input type="range" id="lineWidth" min="1" max="50" value="3" style="margin: 0; width: 100px;">
             </div>
-            
             <div class="toolbar-divider"></div>
-            
-            <button id="drawModeBtn" class="btn-secondary" style="background: var(--text-main); color: white;">펜</button>
+            <button id="drawModeBtn" style="background: var(--color-text-main); color: white;">펜</button>
             <button id="eraserBtn" class="btn-secondary">지우개</button>
-            <button id="clearBtn" class="btn-secondary">초기화</button>
-            <button id="saveBtn" class="btn-secondary">저장</button>
             
-            <button id="reportBtn" class="btn-danger" style="margin-left: auto;">유저 신고</button>
+            <button id="stampToolBtn" class="btn-secondary">스탬프</button>
+            <select id="stampSelector" class="btn-secondary hidden" style="padding: 8px; border-radius: 8px; border: 2px solid var(--color-border); background: white;">
+                <option value="✅">✅ 완료</option>
+                <option value="❌">❌ 오류</option>
+                <option value="💡">💡 아이디어</option>
+                <option value="⭐️">⭐️ 중요</option>
+                <option value="❤️">❤️ 좋아요</option>
+            </select>
+            
+            <button id="clearBtn" class="btn-secondary">초기화</button>
+            <button id="saveBtn" class="btn-primary" style="margin-left: auto; width:auto;">서버 & PC 동시 저장</button>
         </div>
         
         <div id="workspaceContent">
             <div class="canvas-container">
-                <canvas id="drawingBoard" width="1000" height="700"></canvas>
+                <canvas id="drawingBoard" width="1100" height="700"></canvas>
             </div>
             <div class="chat-container">
-                <div class="chat-header">실시간 채팅</div>
+                <div class="chat-header">실시간 세션 대화</div>
                 <div class="chat-messages" id="chatMessages"></div>
                 <div class="chat-input-area">
-                    <input type="text" id="chatInput" placeholder="메시지 입력">
-                    <button class="btn-primary" id="chatSendBtn" style="width: auto;">전송</button>
+                    <input type="text" id="chatInput" placeholder="메시지 입력...">
+                    <button class="btn-primary" id="chatSendBtn" style="background: var(--color-text-main); color: white;">전송</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        /* ==========================================
-           [백엔드 설정] Supabase 초기화 영역
-           실제 서비스 배포 시 아래 키를 본인의 프로젝트 키로 변경해야 합니다.
-        ========================================== */
-        const SUPABASE_URL = 'https://your-project-id.supabase.co';
-        const SUPABASE_ANON_KEY = 'your-anon-key';
-        
-        // Supabase 클라이언트 (주석을 풀고 사용)
-        // const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        // let roomChannel = null; // 실시간 통신을 위한 채널 변수
+        /* [중요] 여기에 본인의 프로젝트 주소와 키를 다시 넣어주세요 */
+        const SUPABASE_URL = 'https://uxaqxpzmmbjsxfrlvbtg.supabase.co'; 
+        const SUPABASE_ANON_KEY = 'sb_publishable_rczFp1BPtv9cwgL4aH5jow_PwXZyI0s';
 
-        // --- 임시 상태 (DB 연동 전까지 UI 테스트용) ---
-        const mockUserDB = { "test": { pw: "1234", nick: "테스트계정" } };
-        let currentUserNick = '';
-        let currentRoom = '';
-        let isEraserMode = false;
-        let activeRooms = [
-            { id: 1, name: '메인 디자인 회의', users: 3, hasPw: false, pw: '' },
-            { id: 2, name: '기밀 프로젝트', users: 1, hasPw: true, pw: '1234' }
-        ];
+        const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const GlobalState = { user: null, currentRoom: null, roomChannel: null, isAdmin: false, roomParticipants: new Set() };
 
-        // --- 인증 폼 전환 ---
-        document.getElementById('showSignupBtn').addEventListener('click', () => { document.getElementById('loginForm').style.display='none'; document.getElementById('signupForm').style.display='block'; });
-        document.getElementById('showLoginBtn').addEventListener('click', () => { document.getElementById('signupForm').style.display='none'; document.getElementById('loginForm').style.display='block'; });
-        
-        // --- 인증 로직 (프론트엔드 임시 처리) ---
-        // 백엔드 연동 시: supabase.auth.signUp() 및 signInWithPassword() 사용
-        document.getElementById('doSignupBtn').addEventListener('click', () => {
-            const id = document.getElementById('signupId').value.trim(), pw = document.getElementById('signupPw').value.trim(), nick = document.getElementById('signupNick').value.trim();
-            if (!id || !pw || !nick) return;
-            mockUserDB[id] = { pw, nick };
-            alert("가입이 완료되었습니다.");
-            document.getElementById('showLoginBtn').click();
-        });
-
-        document.getElementById('doLoginBtn').addEventListener('click', () => {
-            const id = document.getElementById('loginId').value.trim(), pw = document.getElementById('loginPw').value.trim();
-            const user = mockUserDB[id];
-            if (user && user.pw === pw) {
-                currentUserNick = user.nick;
-                document.getElementById('authOverlay').style.display = 'none';
-                document.getElementById('lobbyScreen').style.display = 'flex';
-                document.getElementById('userGreetingMsg').innerText = currentUserNick;
-                renderRoomList();
-            } else { alert("인증에 실패했습니다."); }
-        });
-
-        // --- 방 리스트 렌더링 ---
-        // 백엔드 연동 시: supabase.from('rooms').select('*') 로 데이터 호출
-        function renderRoomList() {
-            const container = document.getElementById('roomListContainer');
-            container.innerHTML = '';
-            activeRooms.forEach(room => {
-                const el = document.createElement('div'); el.className = 'room-item';
-                const statusBadge = room.hasPw ? '<span class="status-badge status-private">비공개</span>' : '<span class="status-badge status-public">공개</span>';
-                el.innerHTML = `
-                    <div>
-                        <span class="room-title">${room.name}</span>
-                        ${statusBadge}
-                        <span class="room-meta">${room.users}명 접속중</span>
-                    </div>
-                    <button class="btn-secondary" style="padding: 6px 12px;" onclick="tryJoinRoom(${room.id})">참여</button>`;
-                container.appendChild(el);
-            });
-        }
-
-        document.getElementById('createRoomBtn').addEventListener('click', () => {
-            const name = document.getElementById('newRoomName').value.trim();
-            const pw = document.getElementById('newRoomPw').value.trim();
-            if (!name) return;
-            // 백엔드 연동 시: supabase.from('rooms').insert([{ name, password: pw, is_private: pw.length > 0 }])
-            activeRooms.push({ id: Date.now(), name: name, users: 1, hasPw: pw.length > 0, pw: pw });
-            renderRoomList(); enterCanvas(name);
-        });
-
-        window.tryJoinRoom = function(roomId) {
-            const room = activeRooms.find(r => r.id === roomId);
-            if (room.hasPw) {
-                const inputPw = prompt(`비밀번호 입력:`);
-                if (inputPw !== room.pw) return alert("비밀번호가 일치하지 않습니다.");
+        const ViewToggle = {
+            switchAuthForm: (targetMode) => {
+                // 오류 수정: display 속성을 직접 제어하여 백지화 현상 해결
+                document.getElementById('loginForm').style.display = targetMode === 'login' ? 'block' : 'none';
+                document.getElementById('signupForm').style.display = targetMode === 'signup' ? 'block' : 'none';
+            },
+            showScreen: (screenId) => {
+                document.getElementById('authOverlay').style.display = screenId === 'auth' ? 'flex' : 'none';
+                document.getElementById('lobbyScreen').style.display = screenId === 'lobby' ? 'flex' : 'none';
+                document.getElementById('mainWorkspace').style.display = screenId === 'workspace' ? 'flex' : 'none';
             }
-            enterCanvas(room.name);
         };
 
-        // --- 방 진입 및 실시간 통신 준비 ---
-        const togglePrivacyBtn = document.getElementById('togglePrivacyBtn');
+        const AuthController = {
+            bindEvents: () => {
+                document.getElementById('showSignupBtn').addEventListener('click', () => ViewToggle.switchAuthForm('signup'));
+                document.getElementById('showLoginBtn').addEventListener('click', () => ViewToggle.switchAuthForm('login'));
+                document.getElementById('doSignupBtn').addEventListener('click', AuthController.handleSignUp);
+                document.getElementById('doLoginBtn').addEventListener('click', AuthController.handleSignIn);
+                /* 기능 구현: 비밀번호 메일 송신 기능 */
+                document.getElementById('doResetPwBtn').addEventListener('click', AuthController.handleResetPassword);
+            },
+            handleSignUp: async () => {
+                const email = document.getElementById('signupEmail').value.trim();
+                const password = document.getElementById('signupPw').value.trim();
+                const nickname = document.getElementById('signupNick').value.trim();
+                const isConsent = document.getElementById('signupConsent').checked;
 
-        function enterCanvas(roomName) {
-            currentRoom = roomName;
-            document.getElementById('lobbyScreen').style.display = 'none';
-            document.getElementById('mainWorkspace').style.display = 'flex';
-            document.getElementById('roomInfoDisplay').innerText = currentRoom;
-            
-            const roomData = activeRooms.find(r => r.name === currentRoom);
-            if(roomData) togglePrivacyBtn.innerText = roomData.hasPw ? '상태: 비공개' : '상태: 공개';
+                if (!email || !password || !nickname) return alert("항목을 모두 채워주세요.");
+                if (!isConsent) return alert("동의 정책에 체크하셔야 플랫폼 이용이 가능합니다.");
 
-            document.getElementById('chatMessages').innerHTML = '';
-            addChatMessage(`시스템: 세션에 연결되었습니다.`, true);
-            initCanvas();
-
-            /* ==========================================
-               [백엔드] Supabase Realtime 채널 구독 로직
-            ========================================== */
-            /*
-            roomChannel = supabase.channel(`room:${currentRoom}`);
-            
-            // 1. 다른 사람의 드로잉 데이터 수신
-            roomChannel.on('broadcast', { event: 'draw' }, payload => {
-                const { x, y, lastX, lastY, color, width } = payload.payload;
-                ctx.strokeStyle = color; ctx.lineWidth = width;
-                ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(x, y); ctx.stroke();
-            });
-
-            // 2. 다른 사람의 채팅 수신
-            roomChannel.on('broadcast', { event: 'chat' }, payload => {
-                addChatMessage(`<b>${payload.payload.nick}:</b> ${payload.payload.text}`);
-            });
-
-            roomChannel.subscribe();
-            */
-        }
-
-        // 상태 전환 (방장 권한)
-        togglePrivacyBtn.addEventListener('click', () => {
-            const roomData = activeRooms.find(r => r.name === currentRoom);
-            if (!roomData) return;
-            if (roomData.hasPw) {
-                if(confirm('공개 세션으로 전환하시겠습니까?')) {
-                    roomData.hasPw = false; roomData.pw = '';
-                    togglePrivacyBtn.innerText = '상태: 공개';
-                    addChatMessage(`시스템: 공개 세션으로 전환되었습니다.`, true);
-                    renderRoomList();
-                    // 백엔드 연동 시: supabase.from('rooms').update({ is_private: false }).eq('name', currentRoom)
+                const { data, error } = await client.auth.signUp({ email, password, options: { data: { nickname: nickname } } });
+                if (error) return alert("가입 실패: " + error.message);
+                
+                if(data.user) {
+                    await client.from('profiles').insert([{ id: data.user.id, email: email, nickname: nickname }]);
                 }
-            } else {
-                const newPw = prompt('설정할 비밀번호를 입력하세요:');
-                if (newPw) {
-                    roomData.hasPw = true; roomData.pw = newPw;
-                    togglePrivacyBtn.innerText = '상태: 비공개';
-                    addChatMessage(`시스템: 비공개 세션으로 전환되었습니다.`, true);
-                    renderRoomList();
+
+                alert("가입 완료! 로그인 해주세요.");
+                ViewToggle.switchAuthForm('login');
+            },
+            handleSignIn: async () => {
+                const email = document.getElementById('loginEmail').value.trim();
+                const password = document.getElementById('loginPw').value.trim();
+                const { data, error } = await client.auth.signInWithPassword({ email, password });
+                if (error) return alert("로그인 실패: " + error.message);
+
+                const { data: profile } = await client.from('profiles').select('*').eq('email', email).single();
+                
+                if (profile && profile.is_banned) {
+                    await client.auth.signOut();
+                    return alert("관리자에 의해 영구 차단된 계정입니다.");
+                }
+
+                if (!profile) {
+                    await client.from('profiles').insert([{ id: data.user.id, email: data.user.email, nickname: data.user.user_metadata.nickname || '운영자' }]);
+                }
+
+                GlobalState.user = { id: data.user.id, email: data.user.email, nickname: data.user.user_metadata.nickname || '유저' };
+
+                if (GlobalState.user.email === 'jinijini5098@naver.com') {
+                    GlobalState.isAdmin = true;
+                    document.getElementById('adminPanelBtn').style.display = 'block';
+                    document.getElementById('editNoticeBtn').classList.remove('hidden');
+                    document.getElementById('editGuideBtn').classList.remove('hidden');
+                    document.getElementById('userGreetingMsg').innerHTML = `<span>${GlobalState.user.nickname}</span> <span class="admin-badge">Admin</span>`;
+                } else {
+                    document.getElementById('userGreetingMsg').innerText = GlobalState.user.nickname;
+                }
+
+                ViewToggle.showScreen('lobby');
+                SystemConfigController.loadSettings();
+                SystemConfigController.loadFeaturedArtwork();
+                RoomController.loadActiveRooms();
+            },
+            handleResetPassword: async () => {
+                const email = prompt("비밀번호 재설정 링크를 받으실 이메일 주소를 입력해 주세요:");
+                if (!email) return;
+                
+                const { error } = await client.auth.resetPasswordForEmail(email, {
+                    redirectTo: window.location.href
+                });
+
+                if (error) return alert("이메일 송신 실패: " + error.message);
+                alert("입력하신 이메일로 비밀번호 재설정 링크가 성공적으로 발송되었습니다. 메일함을 확인하세요.");
+            }
+        };
+
+        const SystemConfigController = {
+            loadSettings: async () => {
+                const { data } = await client.from('system_settings').select('*');
+                if (data) {
+                    data.forEach(item => {
+                        if (item.key === 'notice') document.getElementById('noticeContent').innerText = item.value;
+                        if (item.key === 'guide') document.getElementById('guideContent').innerText = item.value;
+                    });
+                }
+            },
+            loadFeaturedArtwork: async () => {
+                const { data } = await client.from('artworks').select('*').eq('is_featured', true).order('created_at', { ascending: false }).limit(1);
+                if (data && data.length > 0) {
+                    document.getElementById('featuredArtworkContainer').innerHTML = `<img src="${data[0].image_url}" alt="우수작">`;
+                    document.getElementById('featuredMeta').innerText = `방: ${data[0].room_name} / 작가: ${data[0].creator}`;
+                }
+            },
+            bindAdminEvents: () => {
+                document.getElementById('editNoticeBtn').addEventListener('click', async () => {
+                    const current = document.getElementById('noticeContent').innerText;
+                    const nextValue = prompt("수정할 공지사항 내용을 입력하세요:", current);
+                    if (nextValue) {
+                        const {error} = await client.from('system_settings').upsert({ key: 'notice', value: nextValue });
+                        if(error) alert(error.message);
+                        SystemConfigController.loadSettings();
+                    }
+                });
+                document.getElementById('editGuideBtn').addEventListener('click', async () => {
+                    const current = document.getElementById('guideContent').innerText;
+                    const nextValue = prompt("수정할 사용법 가이드를 입력하세요:", current);
+                    if (nextValue) {
+                        await client.from('system_settings').upsert({ key: 'guide', value: nextValue });
+                        SystemConfigController.loadSettings();
+                    }
+                });
+                document.getElementById('adminPanelBtn').addEventListener('click', async () => {
+                    document.getElementById('adminModal').classList.remove('hidden');
+                    SystemConfigController.loadAdminUserList();
+                    SystemConfigController.loadAdminArtworkList();
+                });
+                document.getElementById('closeAdminModalBtn').addEventListener('click', () => {
+                    document.getElementById('adminModal').classList.add('hidden');
+                });
+            },
+            loadAdminUserList: async () => {
+                const listContainer = document.getElementById('adminUserList');
+                listContainer.innerHTML = '<p style="padding:10px;">유저 목록 로딩 중...</p>';
+                const { data } = await client.from('profiles').select('*').order('created_at', { ascending: false });
+                listContainer.innerHTML = '';
+                
+                data.forEach(user => {
+                    const div = document.createElement('div');
+                    div.className = 'list-item';
+                    const isBanned = user.is_banned;
+                    div.innerHTML = `
+                        <div>
+                            <strong style="${isBanned ? 'color:red; text-decoration:line-through;' : ''}">${user.nickname}</strong> 
+                            <span style="color:#64748b;">(${user.email})</span>
+                        </div>
+                        <button class="btn-secondary" style="padding:6px 12px; font-size:12px; border-color:${isBanned ? 'green' : 'red'}; color:${isBanned ? 'green' : 'red'};" 
+                            onclick="SystemConfigController.toggleUserBan('${user.id}', ${isBanned})">
+                            ${isBanned ? '차단 해제' : '영구 차단'}
+                        </button>
+                    `;
+                    listContainer.appendChild(user.id === GlobalState.user.id ? document.createElement('div') : div);
+                    if (user.id !== GlobalState.user.id) listContainer.appendChild(div);
+                });
+            },
+            toggleUserBan: async (userId, currentStatus) => {
+                if(!confirm(currentStatus ? "차단을 해제하시겠습니까?" : "해당 유저의 로그인을 영구 차단하시겠습니까?")) return;
+                await client.from('profiles').update({ is_banned: !currentStatus }).eq('id', userId);
+                SystemConfigController.loadAdminUserList();
+            },
+            loadAdminArtworkList: async () => {
+                const listContainer = document.getElementById('adminArtworkList');
+                listContainer.innerHTML = '<p style="padding:10px;">작품 로딩 중...</p>';
+                const { data } = await client.from('artworks').select('*').order('created_at', { ascending: false });
+                listContainer.innerHTML = '';
+                if (!data || data.length === 0) return listContainer.innerHTML = '<p style="padding:10px;">저장된 작품이 없습니다.</p>';
+                
+                data.forEach(art => {
+                    const div = document.createElement('div');
+                    div.className = 'list-item';
+                    div.innerHTML = `
+                        <div>
+                            <a href="${art.image_url}" target="_blank" style="font-weight:700; color:#b45309;">[작품 원본 보기]</a>
+                            <br><b>세션방:</b> ${art.room_name} | <b>저장자:</b> ${art.creator}
+                            <br><span style="color:var(--color-text-muted);"><b>함께 그린 멤버:</b> ${art.collaborators}</span>
+                        </div>
+                        <div>
+                            ${art.is_featured ? '<span style="color:green; font-weight:700; margin-right:8px;">★ 메인 채택됨</span>' : `<button class="btn-secondary" style="font-size:12px; padding:6px 12px;" onclick="SystemConfigController.adoptArtwork('${art.id}')">메인 화면에 전시</button>`}
+                        </div>
+                    `;
+                    listContainer.appendChild(div);
+                });
+            },
+            adoptArtwork: async (id) => {
+                await client.from('artworks').update({ is_featured: false }).eq('is_featured', true);
+                await client.from('artworks').update({ is_featured: true }).eq('id', id);
+                alert("우수작품으로 채택되어 홈 대시보드에 전시됩니다.");
+                SystemConfigController.loadAdminArtworkList();
+                SystemConfigController.loadFeaturedArtwork();
+            }
+        };
+
+        const RoomController = {
+            bindEvents: () => {
+                document.getElementById('showCreateRoomModalBtn').addEventListener('click', () => { document.getElementById('createRoomForm').classList.toggle('hidden'); });
+                document.getElementById('cancelCreateBtn').addEventListener('click', () => { document.getElementById('createRoomForm').classList.add('hidden'); });
+                document.getElementById('createRoomBtn').addEventListener('click', RoomController.handleCreateRoom);
+                document.getElementById('btnRefreshRooms').addEventListener('click', RoomController.loadActiveRooms);
+                document.getElementById('exitBtn').addEventListener('click', RoomController.handleExitRoom);
+                document.getElementById('togglePrivacyBtn').addEventListener('click', RoomController.handleTogglePrivacy);
+            },
+            loadActiveRooms: async () => {
+                const container = document.getElementById('roomListContainer');
+                container.innerHTML = '로딩 중...';
+                const { data, error } = await client.from('rooms').select('*').order('created_at', { ascending: false });
+                if (error) return container.innerHTML = '데이터 로드 실패';
+                container.innerHTML = '';
+                if (data.length === 0) {
+                    container.innerHTML = '<div style="grid-column: 1/-1; padding: 40px; text-align: center; color: #64748b;">현재 열려있는 방이 없습니다. 첫 번째 방을 만들어보세요!</div>';
+                    return;
+                }
+                data.forEach(room => {
+                    const div = document.createElement('div');
+                    div.className = 'room-card';
+                    const badge = room.is_private ? `<span style="background:#fee2e2; color:#b91c1c; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:800;">비공개</span>` 
+                                                  : `<span style="background:#dcfce7; color:#166534; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:800;">공개</span>`;
+                    
+                    /* 기능 제어: 방 개설자 본인이거나 최고 관리자일 때만 '방 삭제' 노출 */
+                    const isOwner = (room.created_by === GlobalState.user.nickname) || GlobalState.isAdmin;
+                    const deleteBtnHtml = isOwner ? `<button class="btn-danger" style="margin-top:10px; font-size:12px; padding:6px; width:100%;" onclick="RoomController.deleteRoom('${room.id}')">방 삭제</button>` : '';
+
+                    div.innerHTML = `
+                        <div>
+                            <div class="meta">${badge}</div>
+                            <div class="title">${room.name}</div>
+                            <div class="creator-info">개설자: ${room.created_by || '운영자'}</div>
+                        </div>
+                        <div>
+                            <button class="btn-primary" onclick="RoomController.validateAndJoin('${room.id}', ${room.is_private}, '${room.password}', '${room.name}', '${room.created_by}')">입장하기</button>
+                            ${deleteBtnHtml}
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            },
+            handleCreateRoom: async () => {
+                const name = document.getElementById('newRoomName').value.trim();
+                const pw = document.getElementById('newRoomPw').value.trim();
+                if (!name) return alert("방 제목을 입력해주세요.");
+                const isPrivate = pw.length > 0;
+                
+                /* 중요 인프라 기입: 생성 시 현재 유저의 닉네임을 개설자(created_by)로 귀속 */
+                const { data, error } = await client.from('rooms').insert([{ 
+                    name: name, is_private: isPrivate, password: pw, created_by: GlobalState.user.nickname 
+                }]).select();
+                
+                if (error) return alert("방 생성 실패: " + error.message);
+                document.getElementById('newRoomName').value = ''; document.getElementById('newRoomPw').value = '';
+                document.getElementById('createRoomForm').classList.add('hidden');
+                RoomController.executeJoinRoom(data[0].id, name, isPrivate, pw, GlobalState.user.nickname);
+            },
+            validateAndJoin: (id, isPrivate, correctPw, name, createdBy) => {
+                if (isPrivate) {
+                    const userAccessPw = prompt("비밀번호를 입력하세요:");
+                    if (userAccessPw !== correctPw) return alert("비밀번호가 틀렸습니다.");
+                }
+                RoomController.executeJoinRoom(id, name, isPrivate, correctPw, createdBy);
+            },
+            executeJoinRoom: (id, name, isPrivate, password, createdBy) => {
+                GlobalState.currentRoom = { id, name, isPrivate, password, createdBy };
+                GlobalState.roomParticipants.clear();
+                GlobalState.roomParticipants.add(GlobalState.user.nickname);
+
+                ViewToggle.showScreen('workspace');
+                document.getElementById('roomInfoDisplay').innerText = `[${name}]`;
+                document.getElementById('togglePrivacyBtn').innerText = isPrivate ? '비공개' : '공개';
+                document.getElementById('chatMessages').innerHTML = '';
+                WorkspaceSyncEngine.connectRealtimePipeline();
+            },
+            /* 기능 제어: 방 만든 사람 및 관리자만 공개/비공개 전환 권한 부여 */
+            handleTogglePrivacy: async () => {
+                const room = GlobalState.currentRoom;
+                if (!room) return;
+
+                if (room.createdBy !== GlobalState.user.nickname && !GlobalState.isAdmin) {
+                    return alert("방 개설자(방장)만 공개/비공개 설정을 바꿀 수 있습니다.");
+                }
+
+                let updatedPrivate = !room.isPrivate;
+                let updatedPw = '';
+                if (updatedPrivate) {
+                    updatedPw = prompt("설정할 비밀번호:");
+                    if (!updatedPw) return;
+                } else {
+                    if (!confirm("공개방으로 바꾸시겠습니까?")) return;
+                }
+                await client.from('rooms').update({ is_private: updatedPrivate, password: updatedPw }).eq('id', room.id);
+                room.isPrivate = updatedPrivate; room.password = updatedPw;
+                document.getElementById('togglePrivacyBtn').innerText = updatedPrivate ? '비공개' : '공개';
+                if(GlobalState.roomChannel) GlobalState.roomChannel.send({ type: 'broadcast', event: 'privacy_change', payload: { isPrivate: updatedPrivate }});
+            },
+            handleExitRoom: () => {
+                if (GlobalState.roomChannel) { client.removeChannel(GlobalState.roomChannel); GlobalState.roomChannel = null; }
+                GlobalState.currentRoom = null;
+                ViewToggle.showScreen('lobby');
+                RoomController.loadActiveRooms();
+                SystemConfigController.loadFeaturedArtwork();
+            },
+            deleteRoom: async (id) => {
+                if(!confirm("이 프로젝트 세션을 삭제하시겠습니까? 내부 유저들과의 동기화가 중단됩니다.")) return;
+                await client.from('rooms').delete().eq('id', id);
+                alert("삭제 완료");
+                RoomController.loadActiveRooms();
+            }
+        };
+
+        const WorkspaceSyncEngine = {
+            canvas: null, ctx: null, isDrawing: false, lastX: 0, lastY: 0, isEraserMode: false,
+            /* 신규 기능: 스탬프 도구 모드 상태 */
+            toolMode: 'pen', // 'pen', 'eraser', 'stamp'
+
+            initCanvasEngine: () => {
+                WorkspaceSyncEngine.canvas = document.getElementById('drawingBoard');
+                WorkspaceSyncEngine.ctx = WorkspaceSyncEngine.canvas.getContext('2d');
+                WorkspaceSyncEngine.clearCanvasLocal();
+
+                WorkspaceSyncEngine.canvas.addEventListener('mousedown', WorkspaceSyncEngine.handleMouseDown);
+                window.addEventListener('mouseup', () => WorkspaceSyncEngine.isDrawing = false);
+                WorkspaceSyncEngine.canvas.addEventListener('mousemove', WorkspaceSyncEngine.processDrawingData);
+
+                document.getElementById('drawModeBtn').addEventListener('click', () => WorkspaceSyncEngine.setToolMode('pen'));
+                document.getElementById('eraserBtn').addEventListener('click', () => WorkspaceSyncEngine.setToolMode('eraser'));
+                
+                /* 신규 기능: 스탬프 도구 바인딩 */
+                document.getElementById('stampToolBtn').addEventListener('click', () => WorkspaceSyncEngine.setToolMode('stamp'));
+
+                document.getElementById('clearBtn').addEventListener('click', WorkspaceSyncEngine.clearCanvasLocal);
+                document.getElementById('saveBtn').addEventListener('click', WorkspaceSyncEngine.handleCloudAndLocalSave);
+
+                document.getElementById('chatSendBtn').addEventListener('click', WorkspaceSyncEngine.sendChatPacket);
+                document.getElementById('chatInput').addEventListener('keypress', (e) => e.key === 'Enter' && WorkspaceSyncEngine.sendChatPacket());
+            },
+            clearCanvasLocal: () => { WorkspaceSyncEngine.ctx.fillStyle = "#ffffff"; WorkspaceSyncEngine.ctx.fillRect(0, 0, WorkspaceSyncEngine.canvas.width, WorkspaceSyncEngine.canvas.height); },
+            
+            setToolMode: (mode) => {
+                WorkspaceSyncEngine.toolMode = mode;
+                
+                // UI 버튼 상태 업데이트
+                const buttons = ['drawModeBtn', 'eraserBtn', 'stampToolBtn'];
+                buttons.forEach(id => {
+                    const btn = document.getElementById(id);
+                    btn.style.background = 'var(--color-secondary)';
+                    btn.style.color = 'var(--color-text-main)';
+                });
+                
+                const currentBtn = document.getElementById(mode + (mode === 'stamp' ? 'ToolBtn' : 'ModeBtn'));
+                currentBtn.style.background = 'var(--color-text-main)';
+                currentBtn.style.color = 'white';
+                
+                // 마우스 커서 스타일
+                WorkspaceSyncEngine.canvas.style.cursor = mode === 'eraser' ? 'cell' : (mode === 'stamp' ? 'alias' : 'crosshair');
+                
+                // 스탬프 선택창 표시 여부
+                document.getElementById('stampSelector').style.display = mode === 'stamp' ? 'inline-block' : 'none';
+            },
+
+            handleMouseDown: (e) => {
+                WorkspaceSyncEngine.isDrawing = true;
+                WorkspaceSyncEngine.lastX = e.offsetX;
+                WorkspaceSyncEngine.lastY = e.offsetY;
+                
+                /* 신규 기능: 스탬프 모드일 때 클릭 시 스탬프 쾅! */
+                if (WorkspaceSyncEngine.toolMode === 'stamp') {
+                    WorkspaceSyncEngine.placeStampLocal(e.offsetX, e.offsetY);
+                }
+            },
+
+            /* 신규 기능: 로컬에 스탬프 그리고 서버에 전송 */
+            placeStampLocal: (x, y) => {
+                const emoji = document.getElementById('stampSelector').value;
+                WorkspaceSyncEngine.executeStamp(x, y, emoji);
+                
+                // 서버 전송
+                if (GlobalState.roomChannel) {
+                    GlobalState.roomChannel.send({
+                        type: 'broadcast',
+                        event: 'stamp',
+                        payload: { x, y, emoji, sender: GlobalState.user.nickname }
+                    });
+                    // 나도 참여자 목록에 추가 (저장 시 collaborators용)
+                    GlobalState.roomParticipants.add(GlobalState.user.nickname);
+                }
+            },
+            
+            /* 신규 기능: 실제 스탬프 그리기 (로컬 및 원격 공통) */
+            executeStamp: (x, y, emoji) => {
+                const c = WorkspaceSyncEngine.ctx;
+                c.font = '50px serif';
+                c.textAlign = 'center';
+                c.textBaseline = 'middle';
+                c.fillText(emoji, x, y);
+            },
+
+            processDrawingData: (e) => {
+                // 펜/지우개 모드가 아니면 선 그리기 중단
+                if (!WorkspaceSyncEngine.isDrawing || WorkspaceSyncEngine.toolMode === 'stamp') return;
+                
+                const currentX = e.offsetX; const currentY = e.offsetY;
+                const isEraser = WorkspaceSyncEngine.toolMode === 'eraser';
+                const color = isEraser ? "#ffffff" : document.getElementById('colorPicker').value;
+                const width = isEraser ? document.getElementById('lineWidth').value * 2 : document.getElementById('lineWidth').value;
+
+                WorkspaceSyncEngine.executeDrawStroke(WorkspaceSyncEngine.lastX, WorkspaceSyncEngine.lastY, currentX, currentY, color, width);
+
+                if (GlobalState.roomChannel) {
+                    GlobalState.roomChannel.send({ 
+                        type: 'broadcast', 
+                        event: 'draw', 
+                        payload: { x1: WorkspaceSyncEngine.lastX, y1: WorkspaceSyncEngine.lastY, x2: currentX, y2: currentY, color, width, sender: GlobalState.user.nickname } 
+                    });
+                    // 나도 참여자 목록에 추가
+                    GlobalState.roomParticipants.add(GlobalState.user.nickname);
+                }
+                
+                WorkspaceSyncEngine.lastX = currentX; WorkspaceSyncEngine.lastY = currentY;
+            },
+            executeDrawStroke: (x1, y1, x2, y2, color, width) => {
+                const c = WorkspaceSyncEngine.ctx; c.strokeStyle = color; c.lineWidth = width; c.lineCap = 'round'; c.lineJoin = 'round';
+                c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
+            },
+            connectRealtimePipeline: () => {
+                GlobalState.roomChannel = client.channel(`room_pipe_${GlobalState.currentRoom.id}`);
+                GlobalState.roomChannel
+                    .on('broadcast', { event: 'draw' }, (payload) => { 
+                        const d = payload.payload; 
+                        WorkspaceSyncEngine.executeDrawStroke(d.x1, d.y1, d.x2, d.y2, d.color, d.width); 
+                        // [에러 수정] 그리는 사람도 참여자 목록에 추가
+                        if (d.sender) GlobalState.roomParticipants.add(d.sender);
+                    })
+                    .on('broadcast', { event: 'chat' }, (payload) => { 
+                        WorkspaceSyncEngine.appendUserMsg(payload.payload.sender, payload.payload.message); 
+                        // [에러 수정] 채팅하는 사람도 참여자 목록에 추가
+                        if (payload.payload.sender) GlobalState.roomParticipants.add(payload.payload.sender);
+                    })
+                    /* 신규 기능: 원격 스탬프 수신 */
+                    .on('broadcast', { event: 'stamp' }, (payload) => { 
+                        const d = payload.payload; 
+                        WorkspaceSyncEngine.executeStamp(d.x, d.y, d.emoji); 
+                        // [에러 수정] 스탬프 찍는 사람도 참여자 목록에 추가
+                        if (d.sender) GlobalState.roomParticipants.add(d.sender);
+                    })
+                    .subscribe();
+            },
+            sendChatPacket: () => {
+                const input = document.getElementById('chatInput'); const text = input.value.trim(); if (!text) return;
+                WorkspaceSyncEngine.appendUserMsg(GlobalState.user.nickname, text); input.value = '';
+                if (GlobalState.roomChannel) {
+                    GlobalState.roomChannel.send({ type: 'broadcast', event: 'chat', payload: { sender: GlobalState.user.nickname, message: text } });
+                    // 나도 참여자 목록에 추가
+                    GlobalState.roomParticipants.add(GlobalState.user.nickname);
+                }
+            },
+            appendUserMsg: (sender, msg) => {
+                const container = document.getElementById('chatMessages'); const div = document.createElement('div'); div.className = 'chat-msg';
+                div.innerHTML = `<b>${sender}:</b> ${msg}`; container.appendChild(div); container.scrollTop = container.scrollHeight;
+            },
+            handleCloudAndLocalSave: async () => {
+                const saveBtn = document.getElementById('saveBtn');
+                saveBtn.disabled = true; saveBtn.innerText = "서버 저장 중...";
+
+                try {
+                    const blob = await new Promise(resolve => WorkspaceSyncEngine.canvas.toBlob(resolve, 'image/png'));
+                    const fileName = `art_${Date.now()}_${Math.random().toString(36).substr(2, 5)}.png`;
+                    
+                    const { error: storageError } = await client.storage.from('artworks').upload(fileName, blob);
+                    if (storageError) throw storageError;
+
+                    const { data: urlData } = client.storage.from('artworks').getPublicUrl(fileName);
+                    const publicUrl = urlData.publicUrl;
+
+                    /* 에러 수정: 참여자 목록 추적 로직 개선 */
+                    const collaboratorsList = Array.from(GlobalState.roomParticipants).join(', ');
+                    
+                    const { error: dbError } = await client.from('artworks').insert([{
+                        room_name: GlobalState.currentRoom.name, image_url: publicUrl, creator: GlobalState.user.nickname, collaborators: collaboratorsList, is_featured: false
+                    }]);
+                    if (dbError) throw dbError;
+
+                    const a = document.createElement('a');
+                    a.download = `export_${GlobalState.currentRoom.name}.png`;
+                    a.href = WorkspaceSyncEngine.canvas.toDataURL('image/png');
+                    a.click();
+
+                    alert("클라우드 서버 기록 및 PC 로컬 저장이 성공했습니다.");
+                } catch (err) {
+                    alert("저장 실패: " + err.message);
+                } finally {
+                    saveBtn.disabled = false; saveBtn.innerText = "서버 & PC 동시 저장";
                 }
             }
-        });
+        };
 
-        document.getElementById('exitBtn').addEventListener('click', () => {
-            document.getElementById('mainWorkspace').style.display = 'none';
-            document.getElementById('lobbyScreen').style.display = 'flex';
-            // 백엔드 연동 시: if(roomChannel) supabase.removeChannel(roomChannel);
-        });
-
-        // --- 채팅 로직 ---
-        const chatInput = document.getElementById('chatInput');
-        function addChatMessage(msg, isSystem = false) {
-            const div = document.createElement('div');
-            div.className = `chat-msg ${isSystem ? 'system' : ''}`;
-            div.innerHTML = msg;
-            document.getElementById('chatMessages').appendChild(div);
-            document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
-        }
-        function sendMessage() {
-            const text = chatInput.value.trim();
-            if (!text) return;
-            addChatMessage(`<b>${currentUserNick}:</b> ${text}`);
-            chatInput.value = '';
-            
-            // 백엔드 연동 시: 
-            // roomChannel.send({ type: 'broadcast', event: 'chat', payload: { nick: currentUserNick, text: text } });
-        }
-        document.getElementById('chatSendBtn').addEventListener('click', sendMessage);
-        chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
-
-        // --- 캔버스 드로잉 및 브로드캐스트 로직 ---
-        const canvas = document.getElementById('drawingBoard'); const ctx = canvas.getContext('2d');
-        const drawModeBtn = document.getElementById('drawModeBtn');
-        const eraserBtn = document.getElementById('eraserBtn');
-
-        drawModeBtn.addEventListener('click', () => { 
-            isEraserMode = false; canvas.style.cursor = 'crosshair'; 
-            drawModeBtn.style.background = 'var(--text-main)'; drawModeBtn.style.color = 'white';
-            eraserBtn.style.background = 'var(--surface)'; eraserBtn.style.color = 'var(--text-main)';
-        });
-        eraserBtn.addEventListener('click', () => { 
-            isEraserMode = true; canvas.style.cursor = 'cell'; 
-            eraserBtn.style.background = 'var(--text-main)'; eraserBtn.style.color = 'white';
-            drawModeBtn.style.background = 'var(--surface)'; drawModeBtn.style.color = 'var(--text-main)';
-        });
-        
-        document.getElementById('clearBtn').addEventListener('click', () => { if(confirm('초기화하시겠습니까?')) { ctx.fillStyle="white"; ctx.fillRect(0, 0, canvas.width, canvas.height); } });
-        document.getElementById('saveBtn').addEventListener('click', () => { const a = document.createElement('a'); a.download = `canvas_export.png`; a.href = canvas.toDataURL('image/png'); a.click(); });
-
-        function initCanvas() {
-            ctx.fillStyle = "white"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            let isDrawing = false, lastX = 0, lastY = 0;
-            
-            canvas.addEventListener('mousemove', (e) => {
-                if (isDrawing) {
-                    const color = isEraserMode ? "white" : document.getElementById('colorPicker').value;
-                    const width = isEraserMode ? document.getElementById('lineWidth').value * 2 : document.getElementById('lineWidth').value;
-                    
-                    ctx.strokeStyle = color; ctx.lineWidth = width;
-                    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-                    ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(e.offsetX, e.offsetY); ctx.stroke();
-                    
-                    // 백엔드 연동 시: 드로잉 좌표 브로드캐스트 전송 (Throttling 적용 필요)
-                    /*
-                    roomChannel.send({ 
-                        type: 'broadcast', event: 'draw', 
-                        payload: { lastX, lastY, x: e.offsetX, y: e.offsetY, color, width } 
-                    });
-                    */
-                    
-                    lastX = e.offsetX; lastY = e.offsetY;
-                }
-            });
-            canvas.addEventListener('mousedown', (e) => { isDrawing = true; lastX = e.offsetX; lastY = e.offsetY; });
-            window.addEventListener('mouseup', () => isDrawing = false);
-        }
+        window.onload = () => { AuthController.bindEvents(); SystemConfigController.bindAdminEvents(); RoomController.bindEvents(); WorkspaceSyncEngine.initCanvasEngine(); };
     </script>
 </body>
 </html>
