@@ -2,8 +2,23 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SaaS Live Workspace v2.9</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <title>SaaS Live Workspace</title>
+    <meta name="description" content="실시간으로 협업하고 소통하는 웹 기반 드로잉 워크스페이스입니다.">
+    <meta name="keywords" content="그림판, 실시간, 협업, 워크스페이스, 화이트보드">
+    <meta property="og:title" content="SaaS Live Workspace">
+    <meta property="og:description" content="함께 그리는 실시간 캔버스">
+    <meta property="og:type" content="website">
+    
+    <meta name="naver-site-verification" content="95180f83de52241df513d9f693dcf3067ab441b8" />
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#facc15">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --bg-base: #fefce8; --bg-surface: #ffffff; --color-primary: #facc15; --color-primary-hover: #eab308; --color-text-main: #0f172a; --color-text-muted: #64748b; --color-border: #fef08a; --color-danger: #ef4444; --color-secondary: #fef9c3; }
@@ -28,9 +43,9 @@
         .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 30px; padding: 40px; max-width: 1500px; margin: 0 auto; width: 100%; box-sizing: border-box; }
         .section-title { font-size: 20px; font-weight: 800; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--color-border); padding-bottom: 10px; }
         
-        /* 탭 디자인 */
+        /* 수정된 탭 디자인 (SVG 아이콘 정렬) */
         .lobby-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; } 
-        .lobby-tab-btn { background: transparent; color: #64748b; border-radius: 8px; padding: 10px 20px; font-size: 16px; transition: 0.2s; } 
+        .lobby-tab-btn { background: transparent; color: #64748b; border-radius: 8px; padding: 10px 20px; font-size: 15px; font-weight: 600; transition: 0.2s; display: flex; align-items: center; gap: 8px; } 
         .lobby-tab-btn.active { background: var(--color-text-main); color: white; }
         
         .room-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; margin-bottom: 40px; } .room-card { background: var(--bg-surface); padding: 20px; border-radius: 16px; border: 2px solid var(--color-border); transition: 0.3s; display: flex; flex-direction: column; justify-content: space-between; min-height: 130px; } .room-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-color: var(--color-primary); } .room-card .title { font-size: 18px; font-weight: 800; margin-bottom: 4px; } .room-card .creator-info { font-size: 12px; color: var(--color-text-muted); margin-bottom: 12px; }
@@ -140,8 +155,14 @@
             <div class="main-panel">
                 
                 <div class="lobby-tabs">
-                    <button id="tabRoomsBtn" class="lobby-tab-btn active">🎨 프로젝트 세션</button>
-                    <button id="tabCommunityBtn" class="lobby-tab-btn">🗣️ 커뮤니티 광장</button>
+                    <button id="tabRoomsBtn" class="lobby-tab-btn active">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                        프로젝트 세션
+                    </button>
+                    <button id="tabCommunityBtn" class="lobby-tab-btn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                        커뮤니티 광장
+                    </button>
                 </div>
 
                 <div id="roomsTabSection">
@@ -266,6 +287,13 @@
     </div>
 
     <script>
+        // 서비스 워커 등록 (PWA 앱 설치 기능 활성화)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW Registration failed: ', err));
+            });
+        }
+
         const SUPABASE_URL = 'https://uxaqxpzmmbjsxfrlvbtg.supabase.co'; 
         const SUPABASE_ANON_KEY = 'sb_publishable_rczFp1BPtv9cwgL4aH5jow_PwXZyI0s';
 
@@ -323,7 +351,6 @@
                 } else { document.getElementById('userGreetingMsg').innerText = GlobalState.user.nickname; }
 
                 ViewToggle.showScreen('lobby');
-                // V2.9 기획 반영: 프로젝트 세션 탭이 기본으로 선택되도록 복구
                 CommunityController.switchTab('rooms');
                 
                 SystemConfigController.loadSettings(true); 
@@ -391,7 +418,8 @@
                 const targetUser = prompt("신고할 대상의 닉네임을 정확히 입력해주세요:"); if(!targetUser) return;
                 const reason = prompt(`[${targetUser}] 님을 신고하시는 사유를 입력해 주세요:\n(예: 욕설, 부적절한 그림 등)`); if(!reason) return;
                 const { error } = await client.from('reports').insert([{ reporter: GlobalState.user.nickname, reported_user: targetUser, reason: reason, content: "워크스페이스 내부 직접 신고" }]);
-                if(error) return alert("신고 접수 실패: " + error.message); alert(`정상적으로 접수되었습니다.`);
+                if(error) return alert("신고 접수 실패: " + error.message + "\n(데이터베이스 reports 테이블에 컬럼이 제대로 생성되었는지 확인해주세요.)"); 
+                alert(`정상적으로 접수되었습니다.`);
             },
             loadAdminUserList: async () => {
                 const listContainer = document.getElementById('adminUserList'); const { data } = await client.from('profiles').select('*').order('created_at', { ascending: false }); listContainer.innerHTML = '';
@@ -604,7 +632,6 @@
             },
             clearCanvasLocal: () => { WorkspaceSyncEngine.ctx.fillStyle = "#ffffff"; WorkspaceSyncEngine.ctx.fillRect(0, 0, WorkspaceSyncEngine.canvas.width, WorkspaceSyncEngine.canvas.height); },
             
-            /* 기획 반영: 펜/지우개 버그 완벽 수정 및 옵션 분리 표출 */
             setToolMode: (mode) => {
                 WorkspaceSyncEngine.toolMode = mode;
                 
@@ -619,7 +646,6 @@
                     document.getElementById(targetBtnId).style.color = 'white';
                 }
                 
-                // 선택 툴에 따라 상단 컨트롤러 UI 보이기/숨기기
                 document.getElementById('penOptions').style.display = mode === 'pen' ? 'flex' : 'none';
                 document.getElementById('eraserOptions').style.display = mode === 'eraser' ? 'flex' : 'none';
                 
@@ -661,11 +687,8 @@
                 if (!WorkspaceSyncEngine.isDrawing || WorkspaceSyncEngine.toolMode === 'stamp') return;
                 
                 const isEraser = WorkspaceSyncEngine.toolMode === 'eraser';
-                // 지우개면 무조건 흰색 배경색으로, 아니면 컬러피커 색으로
                 const color = isEraser ? "#ffffff" : document.getElementById('colorPicker').value;
-                // 지우개면 지우개 전용 슬라이더 값, 펜이면 펜 슬라이더 값
                 const width = isEraser ? document.getElementById('eraserWidth').value : document.getElementById('lineWidth').value;
-                // 지우개는 브러쉬 타입 무시 (단색)
                 const brushType = isEraser ? 'solid' : document.getElementById('brushType').value;
 
                 WorkspaceSyncEngine.executeDrawStroke(WorkspaceSyncEngine.lastX, WorkspaceSyncEngine.lastY, currentX, currentY, color, width, brushType);
@@ -677,27 +700,24 @@
                 WorkspaceSyncEngine.lastX = currentX; WorkspaceSyncEngine.lastY = currentY;
             },
             
-            /* 기획 반영: 5가지 다채로운 브러쉬 효과 엔진 */
             executeDrawStroke: (x1, y1, x2, y2, color, width, brushType) => {
                 const c = WorkspaceSyncEngine.ctx; 
                 c.strokeStyle = color; c.lineWidth = width; c.lineCap = 'round'; c.lineJoin = 'round';
                 
-                // 설정 초기화 (이전 프레임 잔상 방지)
                 c.globalAlpha = 1.0; c.shadowBlur = 0; c.setLineDash([]);
                 
                 if (brushType === 'highlighter') {
-                    c.globalAlpha = 0.15; // 형광펜: 반투명
+                    c.globalAlpha = 0.15; 
                 } else if (brushType === 'shadow') {
-                    c.shadowBlur = 15; c.shadowColor = color; // 네온펜: 빛나는 그림자
+                    c.shadowBlur = 15; c.shadowColor = color; 
                 } else if (brushType === 'dashed') {
-                    c.setLineDash([width * 2, width * 2]); // 점선펜
+                    c.setLineDash([width * 2, width * 2]); 
                 } else if (brushType === 'marker') {
-                    c.globalAlpha = 0.6; c.lineCap = 'square'; // 마커펜: 사각 브러쉬
+                    c.globalAlpha = 0.6; c.lineCap = 'square'; 
                 }
 
                 c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
                 
-                // 설정 원래대로 복원 (다음 그리기를 위해)
                 c.globalAlpha = 1.0; c.shadowBlur = 0; c.setLineDash([]); c.lineCap = 'round';
             },
 
