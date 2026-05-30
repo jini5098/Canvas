@@ -406,7 +406,6 @@
             bindAdminEvents: () => {
                 document.getElementById('closeNoticeModalBtn').addEventListener('click', () => document.getElementById('noticeModal').classList.add('hidden'));
                 
-                // [신규] 텍스트 수정 모달 열기 이벤트
                 document.getElementById('editNoticeBtn').addEventListener('click', () => {
                     GlobalState.currentEditKey = 'notice';
                     document.getElementById('editConfigTitle').innerText = '공지사항 수정';
@@ -420,7 +419,6 @@
                     document.getElementById('editConfigModal').classList.remove('hidden');
                 });
                 
-                // [신규] 텍스트 수정 모달 닫기/저장 이벤트
                 document.getElementById('closeConfigModalBtn').addEventListener('click', () => document.getElementById('editConfigModal').classList.add('hidden'));
                 document.getElementById('saveConfigBtn').addEventListener('click', async () => {
                     const nextValue = document.getElementById('editConfigContent').value;
@@ -468,13 +466,12 @@
             },
             deleteReport: async (id) => { await client.from('reports').delete().eq('id', id); SystemConfigController.loadAdminReportList(); },
             
-            // [신규] 작품 삭제 기능 추가
             deleteArtwork: async (id) => {
                 if(!confirm("정말 이 작품을 삭제하시겠습니까? (서버에서도 영구 삭제됩니다)")) return;
                 await client.from('artworks').delete().eq('id', id);
                 alert("작품이 삭제되었습니다."); 
                 SystemConfigController.loadAdminArtworkList(); 
-                SystemConfigController.loadFeaturedArtwork(); // 혹시 메인 작품을 지웠을 경우를 대비
+                SystemConfigController.loadFeaturedArtwork(); 
             },
             
             loadAdminArtworkList: async () => {
@@ -482,8 +479,6 @@
                 if (!data || data.length === 0) return listContainer.innerHTML = '<p style="padding:10px;">저장된 작품이 없습니다.</p>';
                 data.forEach(art => {
                     const div = document.createElement('div'); div.className = 'list-item';
-                    
-                    // 삭제 버튼 추가됨
                     div.innerHTML = `<div><a href="${art.image_url}" target="_blank" style="font-weight:700; color:#b45309;">[작품 원본 보기]</a><br><b>세션방:</b> ${art.room_name} | <b>저장자:</b> ${art.creator}</div>
                         <div style="display:flex; gap:6px; align-items:center;">
                             ${art.is_featured ? '<span style="color:green; font-weight:700; margin-right:8px;">★ 메인 채택됨</span>' : `<button class="btn-secondary" style="font-size:12px; padding:6px 12px;" onclick="SystemConfigController.adoptArtwork('${art.id}')">메인 전시</button>`}
@@ -721,6 +716,9 @@
                     GlobalState.roomChannel.send({ type: 'broadcast', event: 'cursor', payload: { x: currentX, y: currentY, sender: GlobalState.user.nickname } });
                 }
 
+                // [수정 사항 ①] 내 로컬 화면에도 내 닉네임이 달린 커서가 자연스럽게 움직이도록 직접 처리
+                WorkspaceSyncEngine.updateLiveCursor(currentX, currentY, GlobalState.user.nickname);
+
                 if (!WorkspaceSyncEngine.isDrawing || WorkspaceSyncEngine.toolMode === 'stamp') return;
                 
                 const isEraser = WorkspaceSyncEngine.toolMode === 'eraser';
@@ -774,18 +772,33 @@
             connectRealtimePipeline: () => {
                 GlobalState.roomChannel = client.channel(`room_pipe_${GlobalState.currentRoom.id}`);
                 GlobalState.roomChannel
-                    .on('broadcast', { event: 'draw' }, (payload) => { const d = payload.payload; WorkspaceSyncEngine.executeDrawStroke(d.x1, d.y1, d.x2, d.y2, d.color, d.width, d.brushType); if (d.sender) GlobalState.roomParticipants.add(d.sender); })
+                    .on('broadcast', { event: 'draw' }, (payload) => { 
+                        const d = payload.payload; 
+                        // [수정 사항 ②] 브로드캐스트 패킷 수신 시, 내가 그린 데이터가 아닐 경우에만 동기화하여 중복 잔상 드로잉 오류 방지
+                        if (d.sender !== GlobalState.user.nickname) {
+                            WorkspaceSyncEngine.executeDrawStroke(d.x1, d.y1, d.x2, d.y2, d.color, d.width, d.brushType); 
+                        }
+                        if (d.sender) GlobalState.roomParticipants.add(d.sender); 
+                    })
                     .on('broadcast', { event: 'chat' }, (payload) => { WorkspaceSyncEngine.appendUserMsg(payload.payload.sender, payload.payload.message); if (payload.payload.sender) GlobalState.roomParticipants.add(payload.payload.sender); })
                     .on('broadcast', { event: 'reaction' }, (payload) => { const d = payload.payload; WorkspaceSyncEngine.spawnFloatingReaction(d.x, d.y, d.emoji); if (d.sender) GlobalState.roomParticipants.add(d.sender); })
-                    .on('broadcast', { event: 'cursor' }, (payload) => { const d = payload.payload; WorkspaceSyncEngine.updateLiveCursor(d.x, d.y, d.sender); })
+                    .on('broadcast', { event: 'cursor' }, (payload) => { 
+                        const d = payload.payload; 
+                        // [수정 사항 ③] 타인의 마우스만 브로드캐스트 이벤트로 트래킹 (내 커서는 processDrawingData에서 실시간 처리)
+                        if (d.sender !== GlobalState.user.nickname) {
+                            WorkspaceSyncEngine.updateLiveCursor(d.x, d.y, d.sender); 
+                        }
+                    })
                     .on('broadcast', { event: 'request_sync' }, (payload) => { 
-                        if (GlobalState.currentRoom && GlobalState.currentRoom.createdBy === GlobalState.user.nickname) {
+                        // 방장 혹은 현재 방에 접속 중인 인원이 새 접속자에게 캔버스 화면 스냅샷 제공
+                        if (GlobalState.currentRoom && (GlobalState.currentRoom.createdBy === GlobalState.user.nickname || GlobalState.isAdmin)) {
                             const dataUrl = WorkspaceSyncEngine.canvas.toDataURL('image/png');
                             GlobalState.roomChannel.send({ type: 'broadcast', event: 'sync_data', payload: { image: dataUrl, targetUser: payload.payload.sender } });
                         }
                     })
                     .on('broadcast', { event: 'sync_data' }, (payload) => {
                         const d = payload.payload;
+                        // [수정 사항 ④] 새로 나갔다 들어온 유저(targetUser)가 '나'일 때만 전송받은 캔버스 데이터를 그대로 렌더링하여 그림 복구 완료
                         if (d.targetUser === GlobalState.user.nickname) {
                             const img = new Image(); img.onload = () => { WorkspaceSyncEngine.ctx.drawImage(img, 0, 0); }; img.src = d.image;
                         }
