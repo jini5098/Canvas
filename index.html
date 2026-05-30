@@ -6,13 +6,8 @@
     
     <title>Live Workspace</title>
     <meta name="description" content="실시간으로 협업하고 소통하는 웹 기반 드로잉 워크스페이스입니다.">
-    <meta name="keywords" content="그림판, 실시간, 협업, 워크스페이스, 화이트보드, 캔버스">
-    <meta property="og:title" content="Live Workspace">
-    <meta property="og:description" content="함께 그리는 실시간 캔버스">
-    <meta property="og:type" content="website">
+    <meta name="keywords" content="그림판, 실시간, 협업, 워크스페이스, 화이트보드">
     
-    <meta name="naver-site-verification" content="95180f83de52241df513d9f693dcf3067ab441b8" />
-
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#facc15">
     <link rel="apple-touch-icon" href="icon-192.png">
@@ -43,7 +38,6 @@
         .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 30px; padding: 40px; max-width: 1500px; margin: 0 auto; width: 100%; box-sizing: border-box; }
         .section-title { font-size: 20px; font-weight: 800; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--color-border); padding-bottom: 10px; }
         
-        /* 수정된 탭 디자인 (SVG 아이콘 정렬) */
         .lobby-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; } 
         .lobby-tab-btn { background: transparent; color: #64748b; border-radius: 8px; padding: 10px 20px; font-size: 15px; font-weight: 600; transition: 0.2s; display: flex; align-items: center; gap: 8px; } 
         .lobby-tab-btn.active { background: var(--color-text-main); color: white; }
@@ -99,6 +93,17 @@
             <h2 style="margin-top:0;">공지사항 안내</h2>
             <div id="popupNoticeContent" style="background:#f8fafc; padding:16px; border-radius:8px; font-size:14px; line-height:1.6; white-space:pre-line; margin-bottom:20px;"></div>
             <button class="btn-primary" id="closeNoticeModalBtn">확인했습니다</button>
+        </div>
+    </div>
+
+    <div id="editConfigModal" class="admin-modal hidden">
+        <div class="admin-modal-card" style="width:500px; border-top:6px solid var(--color-danger);">
+            <h2 id="editConfigTitle" style="margin-top:0;">내용 수정</h2>
+            <textarea id="editConfigContent" rows="10" style="font-family:inherit; resize:vertical; padding:12px; font-size:14px; line-height:1.5; margin-bottom:15px; border:2px solid var(--color-border); border-radius:8px; outline:none;"></textarea>
+            <div style="display:flex; gap:10px;">
+                <button class="btn-primary" id="saveConfigBtn">저장하기</button>
+                <button class="btn-secondary" id="closeConfigModalBtn">취소</button>
+            </div>
         </div>
     </div>
 
@@ -290,7 +295,7 @@
         // 서비스 워커 등록 (PWA 앱 설치 기능 활성화)
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW Registration failed: ', err));
+                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Registration failed: ', err));
             });
         }
 
@@ -298,7 +303,7 @@
         const SUPABASE_ANON_KEY = 'sb_publishable_rczFp1BPtv9cwgL4aH5jow_PwXZyI0s';
 
         const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        const GlobalState = { user: null, currentRoom: null, roomChannel: null, isAdmin: false, roomParticipants: new Set(), currentPostId: null };
+        const GlobalState = { user: null, currentRoom: null, roomChannel: null, isAdmin: false, roomParticipants: new Set(), currentPostId: null, currentEditKey: null };
 
         const ViewToggle = {
             switchAuthForm: (targetMode) => {
@@ -393,20 +398,38 @@
                 if (data && data.length > 0) {
                     document.getElementById('featuredArtworkContainer').innerHTML = `<img src="${data[0].image_url}" alt="우수작">`;
                     document.getElementById('featuredMeta').innerText = `방: ${data[0].room_name} / 작가: ${data[0].creator}`;
+                } else {
+                    document.getElementById('featuredArtworkContainer').innerHTML = `<span style="color:var(--color-text-muted); font-size:13px;">채택된 작품이 없습니다</span>`;
+                    document.getElementById('featuredMeta').innerText = "";
                 }
             },
             bindAdminEvents: () => {
                 document.getElementById('closeNoticeModalBtn').addEventListener('click', () => document.getElementById('noticeModal').classList.add('hidden'));
-                document.getElementById('editNoticeBtn').addEventListener('click', async () => {
-                    const current = document.getElementById('noticeContent').innerText;
-                    const nextValue = prompt("수정할 공지사항:", current);
-                    if (nextValue) { await client.from('system_settings').upsert({ key: 'notice', value: nextValue }); SystemConfigController.loadSettings(); }
+                
+                // [신규] 텍스트 수정 모달 열기 이벤트
+                document.getElementById('editNoticeBtn').addEventListener('click', () => {
+                    GlobalState.currentEditKey = 'notice';
+                    document.getElementById('editConfigTitle').innerText = '공지사항 수정';
+                    document.getElementById('editConfigContent').value = document.getElementById('noticeContent').innerText;
+                    document.getElementById('editConfigModal').classList.remove('hidden');
                 });
-                document.getElementById('editGuideBtn').addEventListener('click', async () => {
-                    const current = document.getElementById('guideContent').innerText;
-                    const nextValue = prompt("수정할 가이드:", current);
-                    if (nextValue) { await client.from('system_settings').upsert({ key: 'guide', value: nextValue }); SystemConfigController.loadSettings(); }
+                document.getElementById('editGuideBtn').addEventListener('click', () => {
+                    GlobalState.currentEditKey = 'guide';
+                    document.getElementById('editConfigTitle').innerText = '사용법 가이드 수정';
+                    document.getElementById('editConfigContent').value = document.getElementById('guideContent').innerText;
+                    document.getElementById('editConfigModal').classList.remove('hidden');
                 });
+                
+                // [신규] 텍스트 수정 모달 닫기/저장 이벤트
+                document.getElementById('closeConfigModalBtn').addEventListener('click', () => document.getElementById('editConfigModal').classList.add('hidden'));
+                document.getElementById('saveConfigBtn').addEventListener('click', async () => {
+                    const nextValue = document.getElementById('editConfigContent').value;
+                    await client.from('system_settings').upsert({ key: GlobalState.currentEditKey, value: nextValue }); 
+                    SystemConfigController.loadSettings(false);
+                    document.getElementById('editConfigModal').classList.add('hidden');
+                    alert("저장되었습니다.");
+                });
+
                 document.getElementById('adminPanelBtn').addEventListener('click', async () => {
                     document.getElementById('adminModal').classList.remove('hidden');
                     SystemConfigController.loadAdminUserList(); SystemConfigController.loadAdminReportList(); SystemConfigController.loadAdminArtworkList();
@@ -418,8 +441,7 @@
                 const targetUser = prompt("신고할 대상의 닉네임을 정확히 입력해주세요:"); if(!targetUser) return;
                 const reason = prompt(`[${targetUser}] 님을 신고하시는 사유를 입력해 주세요:\n(예: 욕설, 부적절한 그림 등)`); if(!reason) return;
                 const { error } = await client.from('reports').insert([{ reporter: GlobalState.user.nickname, reported_user: targetUser, reason: reason, content: "워크스페이스 내부 직접 신고" }]);
-                if(error) return alert("신고 접수 실패: " + error.message + "\n(데이터베이스 reports 테이블에 컬럼이 제대로 생성되었는지 확인해주세요.)"); 
-                alert(`정상적으로 접수되었습니다.`);
+                if(error) return alert("신고 접수 실패: " + error.message); alert(`정상적으로 접수되었습니다.`);
             },
             loadAdminUserList: async () => {
                 const listContainer = document.getElementById('adminUserList'); const { data } = await client.from('profiles').select('*').order('created_at', { ascending: false }); listContainer.innerHTML = '';
@@ -445,13 +467,28 @@
                 });
             },
             deleteReport: async (id) => { await client.from('reports').delete().eq('id', id); SystemConfigController.loadAdminReportList(); },
+            
+            // [신규] 작품 삭제 기능 추가
+            deleteArtwork: async (id) => {
+                if(!confirm("정말 이 작품을 삭제하시겠습니까? (서버에서도 영구 삭제됩니다)")) return;
+                await client.from('artworks').delete().eq('id', id);
+                alert("작품이 삭제되었습니다."); 
+                SystemConfigController.loadAdminArtworkList(); 
+                SystemConfigController.loadFeaturedArtwork(); // 혹시 메인 작품을 지웠을 경우를 대비
+            },
+            
             loadAdminArtworkList: async () => {
                 const listContainer = document.getElementById('adminArtworkList'); const { data } = await client.from('artworks').select('*').order('created_at', { ascending: false }); listContainer.innerHTML = '';
                 if (!data || data.length === 0) return listContainer.innerHTML = '<p style="padding:10px;">저장된 작품이 없습니다.</p>';
                 data.forEach(art => {
                     const div = document.createElement('div'); div.className = 'list-item';
+                    
+                    // 삭제 버튼 추가됨
                     div.innerHTML = `<div><a href="${art.image_url}" target="_blank" style="font-weight:700; color:#b45309;">[작품 원본 보기]</a><br><b>세션방:</b> ${art.room_name} | <b>저장자:</b> ${art.creator}</div>
-                        <div>${art.is_featured ? '<span style="color:green; font-weight:700; margin-right:8px;">★ 메인 채택됨</span>' : `<button class="btn-secondary" style="font-size:12px; padding:6px 12px;" onclick="SystemConfigController.adoptArtwork('${art.id}')">메인 전시</button>`}</div>`;
+                        <div style="display:flex; gap:6px; align-items:center;">
+                            ${art.is_featured ? '<span style="color:green; font-weight:700; margin-right:8px;">★ 메인 채택됨</span>' : `<button class="btn-secondary" style="font-size:12px; padding:6px 12px;" onclick="SystemConfigController.adoptArtwork('${art.id}')">메인 전시</button>`}
+                            <button class="btn-danger" style="font-size:12px; padding:6px 12px;" onclick="SystemConfigController.deleteArtwork('${art.id}')">삭제</button>
+                        </div>`;
                     listContainer.appendChild(div);
                 });
             },
