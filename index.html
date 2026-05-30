@@ -55,7 +55,12 @@
         .admin-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 10000; } .admin-modal-card { background: white; padding: 30px; border-radius: 16px; width: 750px; max-height: 85vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); display: flex; flex-direction: column; } .list-container { max-height: 350px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; } .list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; background: white; }
         
         .floating-reaction { position: absolute; font-size: 40px; pointer-events: none; animation: floatUpFade 2.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; z-index: 50; user-select: none; } @keyframes floatUpFade { 0% { opacity: 1; transform: translateY(0) scale(0.5); } 20% { transform: translateY(-15px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(1); } }
-        .live-cursor { position: absolute; pointer-events: none; z-index: 100; transition: transform 0.1s linear; } .cursor-pointer-svg { width: 16px; height: 16px; fill: #ef4444; filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.3)); } .cursor-label { background: #ef4444; color: white; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 12px; position: absolute; top: 16px; left: 10px; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        
+        /* 마우스 실시간 커서 스타일 보정 완료 (상대좌표 기준점 정렬) */
+        .live-cursor { position: absolute; pointer-events: none; z-index: 100; left: 0; top: 0; will-change: transform; display: block; } 
+        .cursor-pointer-svg { width: 18px; height: 18px; fill: #ef4444; filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.3)); position: absolute; left: 0; top: 0; } 
+        .cursor-label { background: #ef4444; color: white; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 12px; position: absolute; top: 14px; left: 12px; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        
         .reaction-btn { background: white; border: 2px solid var(--color-border); border-radius: 50%; width: 36px; height: 36px; font-size: 18px; display: flex; justify-content: center; align-items: center; cursor: pointer; padding: 0; transition: 0.2s; } .reaction-btn:hover { transform: scale(1.1); border-color: var(--color-primary); } .reaction-bar { display: flex; gap: 6px; padding: 0 8px; border-left: 2px solid var(--color-border); border-right: 2px solid var(--color-border); }
         .comment-box { background: white; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 8px; font-size: 13px; }
     </style>
@@ -292,7 +297,6 @@
     </div>
 
     <script>
-        // 서비스 워커 등록 (PWA 앱 설치 기능 활성화)
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Registration failed: ', err));
@@ -716,8 +720,11 @@
                     GlobalState.roomChannel.send({ type: 'broadcast', event: 'cursor', payload: { x: currentX, y: currentY, sender: GlobalState.user.nickname } });
                 }
 
-                // [수정 사항 ①] 내 로컬 화면에도 내 닉네임이 달린 커서가 자연스럽게 움직이도록 직접 처리
-                WorkspaceSyncEngine.updateLiveCursor(currentX, currentY, GlobalState.user.nickname);
+                // 내 마우스 위치 패킷 추적 교정 (엘리먼트 내부 정렬 배치)
+                const canvasRect = WorkspaceSyncEngine.canvas.getBoundingClientRect();
+                const absoluteX = e.clientX - canvasRect.left;
+                const absoluteY = e.clientY - canvasRect.top;
+                WorkspaceSyncEngine.updateLiveCursor(absoluteX, absoluteY, GlobalState.user.nickname);
 
                 if (!WorkspaceSyncEngine.isDrawing || WorkspaceSyncEngine.toolMode === 'stamp') return;
                 
@@ -737,23 +744,27 @@
             
             executeDrawStroke: (x1, y1, x2, y2, color, width, brushType) => {
                 const c = WorkspaceSyncEngine.ctx; 
+                
+                // [오류 수정] 이전 드로잉의 섀도우 및 알파 스타일 오염 전면 리셋 공정 추가
+                c.save(); 
+                
                 c.strokeStyle = color; c.lineWidth = width; c.lineCap = 'round'; c.lineJoin = 'round';
+                c.globalAlpha = 1.0; c.shadowBlur = 0; c.shadowColor = 'transparent'; c.setLineDash([]);
                 
-                c.globalAlpha = 1.0; c.shadowBlur = 0; c.setLineDash([]);
-                
+                // 붓 타입별 개성 튜닝
                 if (brushType === 'highlighter') {
-                    c.globalAlpha = 0.15; 
+                    c.globalAlpha = 0.35; // 형광펜 투명감 구현
                 } else if (brushType === 'shadow') {
-                    c.shadowBlur = 15; c.shadowColor = color; 
+                    c.shadowBlur = 18; c.shadowColor = color; // 네온펜 발광 극대화
                 } else if (brushType === 'dashed') {
-                    c.setLineDash([width * 2, width * 2]); 
+                    c.setLineDash([Number(width) * 2.5, Number(width) * 2.5]); // 점선 패턴 간격 고정
                 } else if (brushType === 'marker') {
-                    c.globalAlpha = 0.6; c.lineCap = 'square'; 
+                    c.globalAlpha = 0.75; c.lineCap = 'square'; c.lineJoin = 'miter'; // 각진 사각 마커 느낌 부여
                 }
 
                 c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
                 
-                c.globalAlpha = 1.0; c.shadowBlur = 0; c.setLineDash([]); c.lineCap = 'round';
+                c.restore(); // 스타일 롤백 처리
             },
 
             updateLiveCursor: (x, y, sender) => {
@@ -764,7 +775,9 @@
                     cursorEl.innerHTML = `<svg class="cursor-pointer-svg" viewBox="0 0 24 24"><path d="M7 2l12 11.2-5.8.5 3.3 7.3-2.2.9-3.2-7.4-4.4 4.7z"/></svg><div class="cursor-label">${sender}</div>`;
                     container.appendChild(cursorEl);
                 }
-                cursorEl.style.transform = `translate(${x}px, ${y}px)`;
+                // transform 구문 픽셀 단위 완전 고정으로 딜레이 최소화 및 싱크율 보정
+                cursorEl.style.transform = `translate3d(${x}px, ${y}px, 0px)`;
+                
                 clearTimeout(WorkspaceSyncEngine.cursorTimeouts[sender]);
                 WorkspaceSyncEngine.cursorTimeouts[sender] = setTimeout(() => { if (cursorEl && cursorEl.parentNode) cursorEl.remove(); }, 5000);
             },
@@ -774,7 +787,6 @@
                 GlobalState.roomChannel
                     .on('broadcast', { event: 'draw' }, (payload) => { 
                         const d = payload.payload; 
-                        // [수정 사항 ②] 브로드캐스트 패킷 수신 시, 내가 그린 데이터가 아닐 경우에만 동기화하여 중복 잔상 드로잉 오류 방지
                         if (d.sender !== GlobalState.user.nickname) {
                             WorkspaceSyncEngine.executeDrawStroke(d.x1, d.y1, d.x2, d.y2, d.color, d.width, d.brushType); 
                         }
@@ -784,13 +796,11 @@
                     .on('broadcast', { event: 'reaction' }, (payload) => { const d = payload.payload; WorkspaceSyncEngine.spawnFloatingReaction(d.x, d.y, d.emoji); if (d.sender) GlobalState.roomParticipants.add(d.sender); })
                     .on('broadcast', { event: 'cursor' }, (payload) => { 
                         const d = payload.payload; 
-                        // [수정 사항 ③] 타인의 마우스만 브로드캐스트 이벤트로 트래킹 (내 커서는 processDrawingData에서 실시간 처리)
                         if (d.sender !== GlobalState.user.nickname) {
                             WorkspaceSyncEngine.updateLiveCursor(d.x, d.y, d.sender); 
                         }
                     })
                     .on('broadcast', { event: 'request_sync' }, (payload) => { 
-                        // 방장 혹은 현재 방에 접속 중인 인원이 새 접속자에게 캔버스 화면 스냅샷 제공
                         if (GlobalState.currentRoom && (GlobalState.currentRoom.createdBy === GlobalState.user.nickname || GlobalState.isAdmin)) {
                             const dataUrl = WorkspaceSyncEngine.canvas.toDataURL('image/png');
                             GlobalState.roomChannel.send({ type: 'broadcast', event: 'sync_data', payload: { image: dataUrl, targetUser: payload.payload.sender } });
@@ -798,7 +808,6 @@
                     })
                     .on('broadcast', { event: 'sync_data' }, (payload) => {
                         const d = payload.payload;
-                        // [수정 사항 ④] 새로 나갔다 들어온 유저(targetUser)가 '나'일 때만 전송받은 캔버스 데이터를 그대로 렌더링하여 그림 복구 완료
                         if (d.targetUser === GlobalState.user.nickname) {
                             const img = new Image(); img.onload = () => { WorkspaceSyncEngine.ctx.drawImage(img, 0, 0); }; img.src = d.image;
                         }
