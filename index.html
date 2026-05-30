@@ -6,14 +6,7 @@
     
     <title>Live Workspace</title>
     <meta name="description" content="실시간으로 협업하고 소통하는 웹 기반 드로잉 워크스페이스입니다.">
-    <meta name="keywords" content="그림판, 실시간, 협업, 워크스페이스, 화이트보드">
     
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#facc15">
-    <link rel="apple-touch-icon" href="icon-192.png">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --bg-base: #fefce8; --bg-surface: #ffffff; --color-primary: #facc15; --color-primary-hover: #eab308; --color-text-main: #0f172a; --color-text-muted: #64748b; --color-border: #fef08a; --color-danger: #ef4444; --color-secondary: #fef9c3; }
@@ -28,7 +21,6 @@
         #authOverlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(8px); display: flex; justify-content: center; align-items: center; z-index: 9999; }
         .auth-card { background: var(--bg-surface); padding: 40px; border-radius: 16px; width: 340px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); border-top: 6px solid var(--color-primary); }
         .auth-card h2 { margin: 0 0 24px 0; font-size: 24px; font-weight: 800; text-align: center; } .auth-toggle { font-size: 13px; color: var(--color-text-muted); cursor: pointer; text-align: center; margin-top: 14px; font-weight: 600; } .auth-toggle:hover { color: var(--color-text-main); text-decoration: underline; }
-        .consent-box { font-size: 12px; margin-bottom: 15px; padding: 10px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; color: #475569; } .consent-box label { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; line-height: 1.4; } .consent-box input { width: auto; margin: 0; }
         
         #lobbyScreen { display: none; flex-direction: column; padding: 0; flex: 1; overflow-y: auto; }
         .lobby-nav { background: var(--bg-surface); padding: 16px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--color-border); position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); } .lobby-nav h1 { margin: 0; font-size: 24px; font-weight: 800; color: var(--color-text-main); }
@@ -47,8 +39,13 @@
         .best-artwork-box { width: 100%; height: 180px; background: #ffffff; border-radius: 12px; display: flex; justify-content: center; align-items: center; overflow: hidden; border: 2px solid var(--color-primary); position: relative; } .best-artwork-box img { width: 100%; height: 100%; object-fit: cover; }
         
         #mainWorkspace { display: none; flex-direction: column; height: 100vh; position: relative; }
-        #toolbar { padding: 12px 24px; background: var(--bg-surface); border-bottom: 2px solid var(--color-border); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; } .toolbar-divider { width: 2px; height: 24px; background: var(--color-border); margin: 0 8px; }
-        #workspaceContent { display: flex; flex: 1; overflow: hidden; background: var(--bg-base); position: relative; } .canvas-container { flex: 1; display: flex; justify-content: center; align-items: center; padding: 24px; overflow: auto; position: relative; } canvas { background: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); cursor: crosshair; touch-action: none; border: 2px solid var(--color-border); }
+        #toolbar { padding: 12px 24px; background: var(--bg-surface); border-bottom: 2px solid var(--color-border); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } .toolbar-divider { width: 2px; height: 24px; background: var(--color-border); margin: 0 4px; }
+        #workspaceContent { display: flex; flex: 1; overflow: hidden; background: var(--bg-base); position: relative; } 
+        
+        /* [중요] 캔버스와 마우스 커서를 하나로 묶는 래퍼 클래스 추가 */
+        .canvas-container { flex: 1; display: flex; justify-content: center; align-items: center; padding: 24px; overflow: auto; } 
+        .canvas-wrapper { position: relative; display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-radius: 8px; border: 2px solid var(--color-border); background: #ffffff; line-height: 0; }
+        canvas { display: block; border-radius: 6px; cursor: crosshair; touch-action: none; background: transparent; }
         
         .chat-container { width: 320px; background: var(--bg-surface); border-left: 2px solid var(--color-border); display: flex; flex-direction: column; z-index: 10; } .chat-header { padding: 18px; border-bottom: 2px solid var(--color-border); font-weight: 800; background: var(--color-secondary); display:flex; justify-content:space-between; align-items:center; } .chat-messages { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; } .chat-msg { font-size: 13px; line-height: 1.5; padding: 8px 12px; background: #f8fafc; border-radius: 8px; border: 1px solid var(--color-border); position: relative; } .chat-msg b { font-weight: 800; color: #b45309; } .chat-input-area { display: flex; padding: 16px; border-top: 2px solid var(--color-border); } .chat-input-area input { margin: 0; border-radius: 8px 0 0 8px; border-right: none; } .chat-input-area button { border-radius: 0 8px 8px 0; width: auto; }
         
@@ -93,63 +90,10 @@
         </div>
     </div>
 
-    <div id="noticeModal" class="admin-modal hidden">
-        <div class="admin-modal-card" style="width:450px; border-top:6px solid var(--color-primary);">
-            <h2 style="margin-top:0;">공지사항 안내</h2>
-            <div id="popupNoticeContent" style="background:#f8fafc; padding:16px; border-radius:8px; font-size:14px; line-height:1.6; white-space:pre-line; margin-bottom:20px;"></div>
-            <button class="btn-primary" id="closeNoticeModalBtn">확인했습니다</button>
-        </div>
-    </div>
-
-    <div id="editConfigModal" class="admin-modal hidden">
-        <div class="admin-modal-card" style="width:500px; border-top:6px solid var(--color-danger);">
-            <h2 id="editConfigTitle" style="margin-top:0;">내용 수정</h2>
-            <textarea id="editConfigContent" rows="10" style="font-family:inherit; resize:vertical; padding:12px; font-size:14px; line-height:1.5; margin-bottom:15px; border:2px solid var(--color-border); border-radius:8px; outline:none;"></textarea>
-            <div style="display:flex; gap:10px;">
-                <button class="btn-primary" id="saveConfigBtn">저장하기</button>
-                <button class="btn-secondary" id="closeConfigModalBtn">취소</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="postModal" class="admin-modal hidden">
-        <div class="admin-modal-card" style="width:500px;">
-            <h2 style="margin-top:0;">커뮤니티 글쓰기</h2>
-            <select id="postCategory">
-                <option value="feedback">피드백 (오류/건의)</option>
-                <option value="idea">아이디어 공유</option>
-                <option value="free">자유게시판</option>
-            </select>
-            <input type="text" id="postTitle" placeholder="제목을 입력하세요">
-            <textarea id="postContent" rows="6" placeholder="내용을 상세하게 입력하세요" style="font-family:inherit; resize:none;"></textarea>
-            <div style="display:flex; gap:10px;">
-                <button class="btn-primary" id="submitPostBtn">등록하기</button>
-                <button class="btn-secondary" id="closePostModalBtn">취소</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="viewPostModal" class="admin-modal hidden">
-        <div class="admin-modal-card" style="width:600px; max-height:90vh;">
-            <div style="flex-shrink:0;">
-                <span id="viewPostCategory" style="background:var(--color-secondary); padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold;"></span>
-                <h2 id="viewPostTitle" style="margin:10px 0 4px 0;"></h2>
-                <div id="viewPostMeta" style="font-size:12px; color:var(--color-text-muted); margin-bottom:15px;"></div>
-                <div id="viewPostContent" style="background:#f8fafc; padding:20px; border-radius:8px; font-size:14px; line-height:1.6; min-height:80px; white-space:pre-line; margin-bottom:20px; border:1px solid #e2e8f0;"></div>
-            </div>
-            
-            <div style="flex:1; overflow-y:auto; border-top:2px solid var(--color-border); margin-top:10px; padding-top:10px;">
-                <h3 style="font-size:15px; margin-top:0;">댓글</h3>
-                <div id="commentList" style="margin-bottom:15px; min-height:50px;"></div>
-            </div>
-
-            <div style="display:flex; gap:8px; flex-shrink:0; margin-top:10px;">
-                <input type="text" id="newCommentInput" placeholder="댓글을 남겨보세요..." style="margin:0;">
-                <button class="btn-primary" id="submitCommentBtn" style="width:auto; white-space:nowrap;">작성</button>
-            </div>
-            <button class="btn-secondary" id="closeViewPostModalBtn" style="width:100%; margin-top:15px; flex-shrink:0;">닫기</button>
-        </div>
-    </div>
+    <div id="noticeModal" class="admin-modal hidden"><div class="admin-modal-card" style="width:450px; border-top:6px solid var(--color-primary);"><h2 style="margin-top:0;">공지사항 안내</h2><div id="popupNoticeContent" style="background:#f8fafc; padding:16px; border-radius:8px; font-size:14px; line-height:1.6; white-space:pre-line; margin-bottom:20px;"></div><button class="btn-primary" id="closeNoticeModalBtn">확인했습니다</button></div></div>
+    <div id="editConfigModal" class="admin-modal hidden"><div class="admin-modal-card" style="width:500px; border-top:6px solid var(--color-danger);"><h2 id="editConfigTitle" style="margin-top:0;">내용 수정</h2><textarea id="editConfigContent" rows="10" style="font-family:inherit; resize:vertical; padding:12px; font-size:14px; line-height:1.5; margin-bottom:15px; border:2px solid var(--color-border); border-radius:8px; outline:none;"></textarea><div style="display:flex; gap:10px;"><button class="btn-primary" id="saveConfigBtn">저장하기</button><button class="btn-secondary" id="closeConfigModalBtn">취소</button></div></div></div>
+    <div id="postModal" class="admin-modal hidden"><div class="admin-modal-card" style="width:500px;"><h2 style="margin-top:0;">커뮤니티 글쓰기</h2><select id="postCategory"><option value="feedback">피드백 (오류/건의)</option><option value="idea">아이디어 공유</option><option value="free">자유게시판</option></select><input type="text" id="postTitle" placeholder="제목을 입력하세요"><textarea id="postContent" rows="6" placeholder="내용을 상세하게 입력하세요" style="font-family:inherit; resize:none;"></textarea><div style="display:flex; gap:10px;"><button class="btn-primary" id="submitPostBtn">등록하기</button><button class="btn-secondary" id="closePostModalBtn">취소</button></div></div></div>
+    <div id="viewPostModal" class="admin-modal hidden"><div class="admin-modal-card" style="width:600px; max-height:90vh;"><div style="flex-shrink:0;"><span id="viewPostCategory" style="background:var(--color-secondary); padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold;"></span><h2 id="viewPostTitle" style="margin:10px 0 4px 0;"></h2><div id="viewPostMeta" style="font-size:12px; color:var(--color-text-muted); margin-bottom:15px;"></div><div id="viewPostContent" style="background:#f8fafc; padding:20px; border-radius:8px; font-size:14px; line-height:1.6; min-height:80px; white-space:pre-line; margin-bottom:20px; border:1px solid #e2e8f0;"></div></div><div style="flex:1; overflow-y:auto; border-top:2px solid var(--color-border); margin-top:10px; padding-top:10px;"><h3 style="font-size:15px; margin-top:0;">댓글</h3><div id="commentList" style="margin-bottom:15px; min-height:50px;"></div></div><div style="display:flex; gap:8px; flex-shrink:0; margin-top:10px;"><input type="text" id="newCommentInput" placeholder="댓글을 남겨보세요..." style="margin:0;"><button class="btn-primary" id="submitCommentBtn" style="width:auto; white-space:nowrap;">작성</button></div><button class="btn-secondary" id="closeViewPostModalBtn" style="width:100%; margin-top:15px; flex-shrink:0;">닫기</button></div></div>
 
     <div id="lobbyScreen">
         <div class="lobby-nav">
@@ -163,76 +107,31 @@
 
         <div class="dashboard-grid">
             <div class="main-panel">
-                
-                <div class="lobby-tabs">
-                    <button id="tabRoomsBtn" class="lobby-tab-btn active">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
-                        프로젝트 세션
-                    </button>
-                    <button id="tabCommunityBtn" class="lobby-tab-btn">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                        커뮤니티 광장
-                    </button>
-                </div>
+                <div class="lobby-tabs"><button id="tabRoomsBtn" class="lobby-tab-btn active"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>프로젝트 세션</button><button id="tabCommunityBtn" class="lobby-tab-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>커뮤니티 광장</button></div>
 
                 <div id="roomsTabSection">
                     <div class="section-title">진행 중인 프로젝트 세션 <button class="btn-secondary" style="padding: 6px 12px; font-size: 13px;" id="btnRefreshRooms">새로고침</button></div>
                     <div id="createRoomForm" class="hidden" style="background: var(--bg-surface); padding: 24px; border-radius: 16px; border: 2px solid var(--color-border); margin-bottom: 24px;">
-                        <h3>방 개설하기</h3>
-                        <input type="text" id="newRoomName" placeholder="방 제목을 입력하세요">
-                        <input type="password" id="newRoomPw" placeholder="비밀번호 (선택)">
-                        <div style="display: flex; gap: 10px;"><button class="btn-primary" id="createRoomBtn">개설 및 입장</button><button class="btn-secondary" id="cancelCreateBtn">취소</button></div>
+                        <h3>방 개설하기</h3><input type="text" id="newRoomName" placeholder="방 제목을 입력하세요"><input type="password" id="newRoomPw" placeholder="비밀번호 (선택)"><div style="display: flex; gap: 10px;"><button class="btn-primary" id="createRoomBtn">개설 및 입장</button><button class="btn-secondary" id="cancelCreateBtn">취소</button></div>
                     </div>
                     <div id="roomListContainer" class="room-grid"></div>
                 </div>
 
                 <div id="communityTabSection" class="hidden">
-                    <div class="section-title">
-                        커뮤니티 게시판
-                        <div style="display:flex; gap:8px;">
-                            <select id="communityCategoryFilter" style="margin:0; padding:6px 12px; width:auto; background:white; font-size:13px;">
-                                <option value="all">전체 보기</option>
-                                <option value="feedback">피드백</option>
-                                <option value="idea">아이디어</option>
-                                <option value="free">자유</option>
-                            </select>
-                            <button class="btn-primary" id="btnOpenWriteModal" style="width:auto; padding:6px 14px; font-size:13px;">글쓰기</button>
-                        </div>
-                    </div>
+                    <div class="section-title">커뮤니티 게시판<div style="display:flex; gap:8px;"><select id="communityCategoryFilter" style="margin:0; padding:6px 12px; width:auto; background:white; font-size:13px;"><option value="all">전체 보기</option><option value="feedback">피드백</option><option value="idea">아이디어</option><option value="free">자유</option></select><button class="btn-primary" id="btnOpenWriteModal" style="width:auto; padding:6px 14px; font-size:13px;">글쓰기</button></div></div>
                     <div id="communityPostList" class="list-container" style="max-height: 600px; background:white;"></div>
                 </div>
-
             </div>
 
             <div class="side-panel">
-                <div class="info-box" style="border-color: var(--color-primary); background: var(--bg-base);">
-                    <h3 style="color: #b45309;">이주의 우수 채택작</h3>
-                    <div class="best-artwork-box" id="featuredArtworkContainer"><span style="color:var(--color-text-muted); font-size:13px;">채택된 작품이 없습니다</span></div>
-                    <p style="font-size: 12px; text-align: center; color: var(--color-text-muted); margin: 8px 0 0 0;" id="featuredMeta"></p>
-                </div>
-                <div class="info-box">
-                    <h3>공지사항 <button id="editNoticeBtn" class="btn-secondary hidden" style="float:right; padding:2px 8px; font-size:11px;">편집</button></h3>
-                    <div class="info-list" id="noticeContent">로딩 중...</div>
-                </div>
-                <div class="info-box">
-                    <h3>사용법 가이드 <button id="editGuideBtn" class="btn-secondary hidden" style="float:right; padding:2px 8px; font-size:11px;">편집</button></h3>
-                    <div class="info-list" id="guideContent">로딩 중...</div>
-                </div>
+                <div class="info-box" style="border-color: var(--color-primary); background: var(--bg-base);"><h3 style="color: #b45309;">이주의 우수 채택작</h3><div class="best-artwork-box" id="featuredArtworkContainer"><span style="color:var(--color-text-muted); font-size:13px;">채택된 작품이 없습니다</span></div><p style="font-size: 12px; text-align: center; color: var(--color-text-muted); margin: 8px 0 0 0;" id="featuredMeta"></p></div>
+                <div class="info-box"><h3>공지사항 <button id="editNoticeBtn" class="btn-secondary hidden" style="float:right; padding:2px 8px; font-size:11px;">편집</button></h3><div class="info-list" id="noticeContent">로딩 중...</div></div>
+                <div class="info-box"><h3>사용법 가이드 <button id="editGuideBtn" class="btn-secondary hidden" style="float:right; padding:2px 8px; font-size:11px;">편집</button></h3><div class="info-list" id="guideContent">로딩 중...</div></div>
             </div>
         </div>
     </div>
 
-    <div id="adminModal" class="admin-modal hidden">
-        <div class="admin-modal-card">
-            <h2 style="margin:0 0 10px 0; color:#0f172a;">통합 관리자 제어판</h2>
-            <hr style="border:0; border-top:1px solid #e2e8f0; margin-bottom:20px;">
-            <div id="adminUserList" class="list-container" style="margin-bottom: 20px;"></div>
-            <div id="adminReportList" class="list-container" style="margin-bottom: 20px; color:var(--color-danger);"></div>
-            <div id="adminArtworkList" class="list-container"></div>
-            <br>
-            <button class="btn-secondary" id="closeAdminModalBtn" style="width:100%; padding:14px; background:#f1f5f9;">제어판 닫기</button>
-        </div>
-    </div>
+    <div id="adminModal" class="admin-modal hidden"><div class="admin-modal-card"><h2 style="margin:0 0 10px 0; color:#0f172a;">통합 관리자 제어판</h2><hr style="border:0; border-top:1px solid #e2e8f0; margin-bottom:20px;"><div id="adminUserList" class="list-container" style="margin-bottom: 20px;"></div><div id="adminReportList" class="list-container" style="margin-bottom: 20px; color:var(--color-danger);"></div><div id="adminArtworkList" class="list-container"></div><br><button class="btn-secondary" id="closeAdminModalBtn" style="width:100%; padding:14px; background:#f1f5f9;">제어판 닫기</button></div></div>
 
     <div id="mainWorkspace">
         <div id="toolbar">
@@ -243,66 +142,62 @@
             <div class="toolbar-divider"></div>
             
             <button id="drawModeBtn" style="background: var(--color-text-main); color: white;">펜</button>
+            <button id="textModeBtn" class="btn-secondary">텍스트</button>
             
             <div id="penOptions" style="display: flex; align-items: center; gap: 8px;">
                 <select id="brushType" style="margin: 0; width: auto; padding: 6px; border-radius:6px;">
                     <option value="solid">일반 펜</option>
                     <option value="highlighter">형광펜</option>
                     <option value="shadow">네온펜 (빛)</option>
-                    <option value="dashed">점선펜</option>
+                    <option value="dashed">점선펜 (도트)</option>
                     <option value="marker">마커펜 (사각)</option>
                 </select>
                 <input type="color" id="colorPicker" value="#0f172a" style="width: 32px; height: 32px; padding: 0; border: none; cursor: pointer; margin: 0; border-radius: 6px;">
                 <input type="range" id="lineWidth" min="1" max="50" value="3" style="margin: 0; width: 80px;">
             </div>
 
-            <div class="toolbar-divider"></div>
-            
-            <button id="eraserBtn" class="btn-secondary">지우개</button>
-            
-            <div id="eraserOptions" style="display: none; align-items: center; gap: 8px;">
-                <span style="font-size:12px; font-weight:bold; color:var(--color-text-muted);">지우개 굵기</span>
-                <input type="range" id="eraserWidth" min="5" max="150" value="30" style="margin: 0; width: 100px;">
+            <div id="textOptions" style="display: none; align-items: center; gap: 8px;">
+                <input type="text" id="textInputStr" placeholder="입력할 글자..." style="margin:0; width:120px; padding: 6px;">
+                <span style="font-size:12px; font-weight:bold;">크기</span>
+                <input type="number" id="textSize" value="20" style="width:50px; margin:0; padding:6px;">
             </div>
-            
+
+            <div class="toolbar-divider"></div>
+            <button id="eraserBtn" class="btn-secondary">지우개</button>
+            <div id="eraserOptions" style="display: none; align-items: center; gap: 8px;"><span style="font-size:12px; font-weight:bold; color:var(--color-text-muted);">지우개 굵기</span><input type="range" id="eraserWidth" min="5" max="150" value="30" style="margin: 0; width: 100px;"></div>
             <div class="toolbar-divider"></div>
             
             <div class="reaction-bar" id="reactionBar">
                 <button class="reaction-btn" onclick="WorkspaceSyncEngine.setToolModeAndEmoji('👍')">👍</button>
                 <button class="reaction-btn" onclick="WorkspaceSyncEngine.setToolModeAndEmoji('❤️')">❤️</button>
                 <button class="reaction-btn" onclick="WorkspaceSyncEngine.setToolModeAndEmoji('😂')">😂</button>
-                <button class="reaction-btn" onclick="WorkspaceSyncEngine.setToolModeAndEmoji('🔥')">🔥</button>
-                <button class="reaction-btn" onclick="WorkspaceSyncEngine.setToolModeAndEmoji('✨')">✨</button>
             </div>
             
-            <button id="clearBtn" class="btn-secondary" style="margin-left: 8px;">초기화</button>
+            <div class="toolbar-divider"></div>
+            <button id="toggleGridBtn" class="btn-secondary">모눈종이</button>
+            <button id="undoBtn" class="btn-secondary" style="margin-left:4px;" title="되돌리기 (모든 사용자 화면 동기화)">⏪ 되돌리기</button>
+            <button id="clearBtn" class="btn-secondary" style="margin-left: 4px;">초기화</button>
+            
             <div class="toolbar-divider"></div>
             <button id="workspaceReportBtn" class="btn-danger" style="margin-left:auto;">🚨 신고</button>
-            <button id="saveBtn" class="btn-primary" style="margin-left: 8px; width:auto;">서버 & PC 저장</button>
+            <button id="saveBtn" class="btn-primary" style="margin-left: 8px; width:auto;">이미지 다운로드 및 저장</button>
         </div>
         
         <div id="workspaceContent">
             <div class="canvas-container" id="canvasContainer">
-                <canvas id="drawingBoard" width="1100" height="700"></canvas>
+                <div id="canvasWrapper" class="canvas-wrapper">
+                    <canvas id="drawingBoard" width="1100" height="700"></canvas>
+                </div>
             </div>
             <div class="chat-container">
                 <div class="chat-header">실시간 세션 대화</div>
                 <div class="chat-messages" id="chatMessages"></div>
-                <div class="chat-input-area">
-                    <input type="text" id="chatInput" placeholder="메시지 입력...">
-                    <button class="btn-primary" id="chatSendBtn" style="background: var(--color-text-main); color: white;">전송</button>
-                </div>
+                <div class="chat-input-area"><input type="text" id="chatInput" placeholder="메시지 입력..."><button class="btn-primary" id="chatSendBtn" style="background: var(--color-text-main); color: white;">전송</button></div>
             </div>
         </div>
     </div>
 
     <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Registration failed: ', err));
-            });
-        }
-
         const SUPABASE_URL = 'https://uxaqxpzmmbjsxfrlvbtg.supabase.co'; 
         const SUPABASE_ANON_KEY = 'sb_publishable_rczFp1BPtv9cwgL4aH5jow_PwXZyI0s';
 
@@ -330,10 +225,6 @@
                 document.getElementById('doLoginBtn').addEventListener('click', AuthController.handleSignIn);
                 document.getElementById('doResetPwBtn').addEventListener('click', AuthController.handleResetPassword);
                 document.getElementById('doUpdatePwBtn').addEventListener('click', AuthController.handleExecuteUpdatePw);
-
-                client.auth.onAuthStateChange((event, session) => {
-                    if (event === 'PASSWORD_RECOVERY') { document.getElementById('authOverlay').style.display = 'flex'; ViewToggle.switchAuthForm('updatePw'); }
-                });
             },
             handleSignUp: async () => {
                 const email = document.getElementById('signupEmail').value.trim(); const password = document.getElementById('signupPw').value.trim(); const nickname = document.getElementById('signupNick').value.trim();
@@ -389,8 +280,7 @@
                 if (data) {
                     data.forEach(item => {
                         if (item.key === 'notice') {
-                            document.getElementById('noticeContent').innerText = item.value;
-                            document.getElementById('popupNoticeContent').innerText = item.value;
+                            document.getElementById('noticeContent').innerText = item.value; document.getElementById('popupNoticeContent').innerText = item.value;
                             if(triggerPopup) document.getElementById('noticeModal').classList.remove('hidden');
                         }
                         if (item.key === 'guide') document.getElementById('guideContent').innerText = item.value;
@@ -409,33 +299,11 @@
             },
             bindAdminEvents: () => {
                 document.getElementById('closeNoticeModalBtn').addEventListener('click', () => document.getElementById('noticeModal').classList.add('hidden'));
-                
-                document.getElementById('editNoticeBtn').addEventListener('click', () => {
-                    GlobalState.currentEditKey = 'notice';
-                    document.getElementById('editConfigTitle').innerText = '공지사항 수정';
-                    document.getElementById('editConfigContent').value = document.getElementById('noticeContent').innerText;
-                    document.getElementById('editConfigModal').classList.remove('hidden');
-                });
-                document.getElementById('editGuideBtn').addEventListener('click', () => {
-                    GlobalState.currentEditKey = 'guide';
-                    document.getElementById('editConfigTitle').innerText = '사용법 가이드 수정';
-                    document.getElementById('editConfigContent').value = document.getElementById('guideContent').innerText;
-                    document.getElementById('editConfigModal').classList.remove('hidden');
-                });
-                
+                document.getElementById('editNoticeBtn').addEventListener('click', () => { GlobalState.currentEditKey = 'notice'; document.getElementById('editConfigTitle').innerText = '공지사항 수정'; document.getElementById('editConfigContent').value = document.getElementById('noticeContent').innerText; document.getElementById('editConfigModal').classList.remove('hidden'); });
+                document.getElementById('editGuideBtn').addEventListener('click', () => { GlobalState.currentEditKey = 'guide'; document.getElementById('editConfigTitle').innerText = '사용법 가이드 수정'; document.getElementById('editConfigContent').value = document.getElementById('guideContent').innerText; document.getElementById('editConfigModal').classList.remove('hidden'); });
                 document.getElementById('closeConfigModalBtn').addEventListener('click', () => document.getElementById('editConfigModal').classList.add('hidden'));
-                document.getElementById('saveConfigBtn').addEventListener('click', async () => {
-                    const nextValue = document.getElementById('editConfigContent').value;
-                    await client.from('system_settings').upsert({ key: GlobalState.currentEditKey, value: nextValue }); 
-                    SystemConfigController.loadSettings(false);
-                    document.getElementById('editConfigModal').classList.add('hidden');
-                    alert("저장되었습니다.");
-                });
-
-                document.getElementById('adminPanelBtn').addEventListener('click', async () => {
-                    document.getElementById('adminModal').classList.remove('hidden');
-                    SystemConfigController.loadAdminUserList(); SystemConfigController.loadAdminReportList(); SystemConfigController.loadAdminArtworkList();
-                });
+                document.getElementById('saveConfigBtn').addEventListener('click', async () => { const nextValue = document.getElementById('editConfigContent').value; await client.from('system_settings').upsert({ key: GlobalState.currentEditKey, value: nextValue }); SystemConfigController.loadSettings(false); document.getElementById('editConfigModal').classList.add('hidden'); alert("저장되었습니다."); });
+                document.getElementById('adminPanelBtn').addEventListener('click', async () => { document.getElementById('adminModal').classList.remove('hidden'); SystemConfigController.loadAdminUserList(); SystemConfigController.loadAdminReportList(); SystemConfigController.loadAdminArtworkList(); });
                 document.getElementById('closeAdminModalBtn').addEventListener('click', () => document.getElementById('adminModal').classList.add('hidden'));
                 document.getElementById('workspaceReportBtn').addEventListener('click', SystemConfigController.handleDirectReport);
             },
@@ -472,10 +340,7 @@
             
             deleteArtwork: async (id) => {
                 if(!confirm("정말 이 작품을 삭제하시겠습니까? (서버에서도 영구 삭제됩니다)")) return;
-                await client.from('artworks').delete().eq('id', id);
-                alert("작품이 삭제되었습니다."); 
-                SystemConfigController.loadAdminArtworkList(); 
-                SystemConfigController.loadFeaturedArtwork(); 
+                await client.from('artworks').delete().eq('id', id); alert("작품이 삭제되었습니다."); SystemConfigController.loadAdminArtworkList(); SystemConfigController.loadFeaturedArtwork(); 
             },
             
             loadAdminArtworkList: async () => {
@@ -502,7 +367,6 @@
             bindEvents: () => {
                 document.getElementById('tabRoomsBtn').addEventListener('click', () => CommunityController.switchTab('rooms'));
                 document.getElementById('tabCommunityBtn').addEventListener('click', () => CommunityController.switchTab('community'));
-                
                 document.getElementById('btnOpenWriteModal').addEventListener('click', () => document.getElementById('postModal').classList.remove('hidden'));
                 document.getElementById('closePostModalBtn').addEventListener('click', () => document.getElementById('postModal').classList.add('hidden'));
                 document.getElementById('submitPostBtn').addEventListener('click', CommunityController.handleWritePost);
@@ -513,16 +377,8 @@
             switchTab: (type) => {
                 document.getElementById('tabRoomsBtn').className = `lobby-tab-btn ${type === 'rooms' ? 'active' : ''}`;
                 document.getElementById('tabCommunityBtn').className = `lobby-tab-btn ${type === 'community' ? 'active' : ''}`;
-                
-                if(type === 'rooms') {
-                    document.getElementById('roomsTabSection').classList.remove('hidden');
-                    document.getElementById('communityTabSection').classList.add('hidden');
-                    RoomController.loadActiveRooms();
-                } else {
-                    document.getElementById('roomsTabSection').classList.add('hidden');
-                    document.getElementById('communityTabSection').classList.remove('hidden');
-                    CommunityController.loadPosts();
-                }
+                if(type === 'rooms') { document.getElementById('roomsTabSection').classList.remove('hidden'); document.getElementById('communityTabSection').classList.add('hidden'); RoomController.loadActiveRooms(); } 
+                else { document.getElementById('roomsTabSection').classList.add('hidden'); document.getElementById('communityTabSection').classList.remove('hidden'); CommunityController.loadPosts(); }
             },
             handleWritePost: async () => {
                 const category = document.getElementById('postCategory').value; const title = document.getElementById('postTitle').value.trim(); const content = document.getElementById('postContent').value.trim();
@@ -533,8 +389,7 @@
             },
             loadPosts: async () => {
                 const filter = document.getElementById('communityCategoryFilter').value; const container = document.getElementById('communityPostList'); container.innerHTML = '<p style="padding:15px;">불러오는 중...</p>';
-                let query = client.from('community_posts').select('*').order('created_at', { ascending: false });
-                if(filter !== 'all') query = query.eq('category', filter);
+                let query = client.from('community_posts').select('*').order('created_at', { ascending: false }); if(filter !== 'all') query = query.eq('category', filter);
                 const { data } = await query; container.innerHTML = '';
                 if(!data || data.length === 0) return container.innerHTML = '<p style="padding:20px; color:#64748b; text-align:center;">게시글이 없습니다. 첫 의견을 남겨보세요!</p>';
                 const catMap = { feedback: '피드백', idea: '아이디어', free: '자유' };
@@ -549,15 +404,12 @@
                 document.getElementById('viewPostCategory').innerText = catLabel; document.getElementById('viewPostTitle').innerText = post.title;
                 document.getElementById('viewPostMeta').innerText = `작성자: ${post.author} | 작성일: ${new Date(post.created_at).toLocaleString()}`;
                 document.getElementById('viewPostContent').innerText = post.content; 
-                
-                await CommunityController.loadComments(post.id);
-                document.getElementById('viewPostModal').classList.remove('hidden');
+                await CommunityController.loadComments(post.id); document.getElementById('viewPostModal').classList.remove('hidden');
             },
             loadComments: async (postId) => {
                 const list = document.getElementById('commentList'); list.innerHTML = '<p style="font-size:12px; color:#94a3b8;">댓글 로딩 중...</p>';
                 const { data, error } = await client.from('community_comments').select('*').eq('post_id', postId).order('created_at', { ascending: true });
-                list.innerHTML = '';
-                if(error || !data || data.length === 0) { list.innerHTML = '<p style="font-size:12px; color:#94a3b8;">작성된 댓글이 없습니다.</p>'; return; }
+                list.innerHTML = ''; if(error || !data || data.length === 0) { list.innerHTML = '<p style="font-size:12px; color:#94a3b8;">작성된 댓글이 없습니다.</p>'; return; }
                 data.forEach(comment => {
                     const div = document.createElement('div'); div.className = 'comment-box';
                     div.innerHTML = `<strong style="color:#b45309;">${comment.author}</strong> <span style="color:#64748b; font-size:11px; margin-left:6px;">${new Date(comment.created_at).toLocaleString()}</span><div style="margin-top:4px;">${comment.content}</div>`;
@@ -566,11 +418,9 @@
                 list.parentElement.scrollTop = list.parentElement.scrollHeight;
             },
             handleAddComment: async () => {
-                const input = document.getElementById('newCommentInput'); const content = input.value.trim();
-                if(!content || !GlobalState.currentPostId) return;
+                const input = document.getElementById('newCommentInput'); const content = input.value.trim(); if(!content || !GlobalState.currentPostId) return;
                 const { error } = await client.from('community_comments').insert([{ post_id: GlobalState.currentPostId, content: content, author: GlobalState.user.nickname }]);
-                if(error) return alert("댓글 작성 실패!");
-                input.value = ''; CommunityController.loadComments(GlobalState.currentPostId);
+                if(error) return alert("댓글 작성 실패!"); input.value = ''; CommunityController.loadComments(GlobalState.currentPostId);
             }
         };
 
@@ -590,8 +440,7 @@
                 if (data.length === 0) return container.innerHTML = '<div style="grid-column: 1/-1; padding: 40px; text-align: center; color: #64748b;">현재 열려있는 방이 없습니다.</div>';
                 data.forEach(room => {
                     const div = document.createElement('div'); div.className = 'room-card';
-                    const badge = room.is_private ? `<span style="background:#fee2e2; color:#b91c1c; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:800;">비공개</span>` 
-                                                  : `<span style="background:#dcfce7; color:#166534; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:800;">공개</span>`;
+                    const badge = room.is_private ? `<span style="background:#fee2e2; color:#b91c1c; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:800;">비공개</span>` : `<span style="background:#dcfce7; color:#166534; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:800;">공개</span>`;
                     const isOwner = (room.created_by === GlobalState.user.nickname) || GlobalState.isAdmin;
                     const deleteBtnHtml = isOwner ? `<button class="btn-danger" style="margin-top:10px; font-size:12px; padding:6px; width:100%;" onclick="RoomController.deleteRoom('${room.id}')">방 삭제</button>` : '';
 
@@ -615,12 +464,9 @@
             executeJoinRoom: (id, name, isPrivate, password, createdBy) => {
                 GlobalState.currentRoom = { id, name, isPrivate, password, createdBy };
                 GlobalState.roomParticipants.clear(); GlobalState.roomParticipants.add(GlobalState.user.nickname);
-                ViewToggle.showScreen('workspace');
-                document.getElementById('roomInfoDisplay').innerText = `[${name}]`;
-                document.getElementById('togglePrivacyBtn').innerText = isPrivate ? '비공개' : '공개';
-                document.getElementById('chatMessages').innerHTML = '';
+                ViewToggle.showScreen('workspace'); document.getElementById('roomInfoDisplay').innerText = `[${name}]`;
+                document.getElementById('togglePrivacyBtn').innerText = isPrivate ? '비공개' : '공개'; document.getElementById('chatMessages').innerHTML = '';
                 WorkspaceSyncEngine.connectRealtimePipeline();
-                
                 setTimeout(() => { if(GlobalState.roomChannel) GlobalState.roomChannel.send({ type: 'broadcast', event: 'request_sync', payload: { sender: GlobalState.user.nickname } }); }, 1000);
             },
             handleTogglePrivacy: async () => {
@@ -636,7 +482,7 @@
             handleExitRoom: () => {
                 if (GlobalState.roomChannel) { client.removeChannel(GlobalState.roomChannel); GlobalState.roomChannel = null; }
                 GlobalState.currentRoom = null; ViewToggle.showScreen('lobby'); RoomController.loadActiveRooms(); SystemConfigController.loadFeaturedArtwork();
-                document.querySelectorAll('.live-cursor').forEach(el => el.remove());
+                document.querySelectorAll('.live-cursor').forEach(el => el.remove()); WorkspaceSyncEngine.undoStack = [];
             },
             deleteRoom: async (id) => {
                 if(!confirm("이 프로젝트 세션을 삭제하시겠습니까?")) return;
@@ -646,11 +492,10 @@
 
         const WorkspaceSyncEngine = {
             canvas: null, ctx: null, isDrawing: false, lastX: 0, lastY: 0, toolMode: 'pen', currentEmoji: '👍',
-            cursorTimeouts: {},
+            lastDotX: 0, lastDotY: 0, cursorTimeouts: {}, undoStack: [], gridEnabled: false,
 
             initCanvasEngine: () => {
-                WorkspaceSyncEngine.canvas = document.getElementById('drawingBoard');
-                WorkspaceSyncEngine.ctx = WorkspaceSyncEngine.canvas.getContext('2d');
+                WorkspaceSyncEngine.canvas = document.getElementById('drawingBoard'); WorkspaceSyncEngine.ctx = WorkspaceSyncEngine.canvas.getContext('2d');
                 WorkspaceSyncEngine.clearCanvasLocal();
 
                 WorkspaceSyncEngine.canvas.addEventListener('mousedown', WorkspaceSyncEngine.handleMouseDown);
@@ -659,24 +504,31 @@
 
                 document.getElementById('drawModeBtn').addEventListener('click', () => WorkspaceSyncEngine.setToolMode('pen'));
                 document.getElementById('eraserBtn').addEventListener('click', () => WorkspaceSyncEngine.setToolMode('eraser'));
+                document.getElementById('textModeBtn').addEventListener('click', () => WorkspaceSyncEngine.setToolMode('text')); // 신규
 
-                document.getElementById('clearBtn').addEventListener('click', WorkspaceSyncEngine.clearCanvasLocal);
+                document.getElementById('clearBtn').addEventListener('click', () => { WorkspaceSyncEngine.saveUndoState(); WorkspaceSyncEngine.clearCanvasLocal(); if (GlobalState.roomChannel) GlobalState.roomChannel.send({ type: 'broadcast', event: 'clear', payload: { sender: GlobalState.user.nickname }}); });
+                document.getElementById('undoBtn').addEventListener('click', WorkspaceSyncEngine.handleUndo); // 신규
+                document.getElementById('toggleGridBtn').addEventListener('click', WorkspaceSyncEngine.toggleGrid); // 신규
                 document.getElementById('saveBtn').addEventListener('click', WorkspaceSyncEngine.handleCloudAndLocalSave);
 
                 document.getElementById('chatSendBtn').addEventListener('click', WorkspaceSyncEngine.sendChatPacket);
                 document.getElementById('chatInput').addEventListener('keypress', (e) => e.key === 'Enter' && WorkspaceSyncEngine.sendChatPacket());
             },
+            
             clearCanvasLocal: () => { WorkspaceSyncEngine.ctx.fillStyle = "#ffffff"; WorkspaceSyncEngine.ctx.fillRect(0, 0, WorkspaceSyncEngine.canvas.width, WorkspaceSyncEngine.canvas.height); },
             
             setToolMode: (mode) => {
                 WorkspaceSyncEngine.toolMode = mode;
-                
-                ['drawModeBtn', 'eraserBtn'].forEach(id => {
+                ['drawModeBtn', 'eraserBtn', 'textModeBtn'].forEach(id => {
                     document.getElementById(id).style.background = 'var(--color-secondary)';
                     document.getElementById(id).style.color = 'var(--color-text-main)';
                 });
                 
-                const targetBtnId = mode === 'pen' ? 'drawModeBtn' : (mode === 'eraser' ? 'eraserBtn' : null);
+                let targetBtnId = null;
+                if (mode === 'pen') targetBtnId = 'drawModeBtn';
+                else if (mode === 'eraser') targetBtnId = 'eraserBtn';
+                else if (mode === 'text') targetBtnId = 'textModeBtn';
+                
                 if (targetBtnId) {
                     document.getElementById(targetBtnId).style.background = 'var(--color-text-main)';
                     document.getElementById(targetBtnId).style.color = 'white';
@@ -684,22 +536,67 @@
                 
                 document.getElementById('penOptions').style.display = mode === 'pen' ? 'flex' : 'none';
                 document.getElementById('eraserOptions').style.display = mode === 'eraser' ? 'flex' : 'none';
+                document.getElementById('textOptions').style.display = mode === 'text' ? 'flex' : 'none'; // 신규
                 
-                WorkspaceSyncEngine.canvas.style.cursor = mode === 'eraser' ? 'cell' : (mode === 'stamp' ? 'alias' : 'crosshair');
+                WorkspaceSyncEngine.canvas.style.cursor = mode === 'eraser' ? 'cell' : (mode === 'stamp' ? 'alias' : (mode === 'text' ? 'text' : 'crosshair'));
             },
 
             setToolModeAndEmoji: (emoji) => {
-                WorkspaceSyncEngine.setToolMode('stamp');
-                WorkspaceSyncEngine.currentEmoji = emoji;
-                WorkspaceSyncEngine.canvas.style.cursor = 'alias';
+                WorkspaceSyncEngine.setToolMode('stamp'); WorkspaceSyncEngine.currentEmoji = emoji; WorkspaceSyncEngine.canvas.style.cursor = 'alias';
+            },
+
+            toggleGrid: (e) => {
+                WorkspaceSyncEngine.gridEnabled = !WorkspaceSyncEngine.gridEnabled;
+                if (WorkspaceSyncEngine.gridEnabled) {
+                    WorkspaceSyncEngine.canvas.style.backgroundImage = 'linear-gradient(var(--color-border) 1px, transparent 1px), linear-gradient(90deg, var(--color-border) 1px, transparent 1px)';
+                    WorkspaceSyncEngine.canvas.style.backgroundSize = '20px 20px';
+                    e.target.style.background = 'var(--color-text-main)'; e.target.style.color = 'white';
+                } else {
+                    WorkspaceSyncEngine.canvas.style.backgroundImage = 'none';
+                    e.target.style.background = 'var(--color-secondary)'; e.target.style.color = 'var(--color-text-main)';
+                }
+            },
+
+            saveUndoState: () => {
+                WorkspaceSyncEngine.undoStack.push(WorkspaceSyncEngine.canvas.toDataURL());
+                if (WorkspaceSyncEngine.undoStack.length > 10) WorkspaceSyncEngine.undoStack.shift(); // 최대 10개 기록
+            },
+
+            handleUndo: () => {
+                if (WorkspaceSyncEngine.undoStack.length === 0) return alert("되돌릴 작업이 없습니다.");
+                const lastState = WorkspaceSyncEngine.undoStack.pop();
+                const img = new Image();
+                img.onload = () => { 
+                    WorkspaceSyncEngine.clearCanvasLocal(); WorkspaceSyncEngine.ctx.drawImage(img, 0, 0); 
+                    if (GlobalState.roomChannel) GlobalState.roomChannel.send({ type: 'broadcast', event: 'sync_data_all', payload: { image: lastState } });
+                };
+                img.src = lastState;
             },
 
             handleMouseDown: (e) => {
-                WorkspaceSyncEngine.isDrawing = true; WorkspaceSyncEngine.lastX = e.offsetX; WorkspaceSyncEngine.lastY = e.offsetY;
+                WorkspaceSyncEngine.isDrawing = true; 
+                WorkspaceSyncEngine.lastX = e.offsetX; WorkspaceSyncEngine.lastY = e.offsetY;
+                WorkspaceSyncEngine.lastDotX = e.offsetX; WorkspaceSyncEngine.lastDotY = e.offsetY; // 점선펜 용도
+                
+                WorkspaceSyncEngine.saveUndoState(); // 언두 기록 저장
+                
                 if (WorkspaceSyncEngine.toolMode === 'stamp') {
                     WorkspaceSyncEngine.placeReactionLocal(e.offsetX, e.offsetY);
+                } else if (WorkspaceSyncEngine.toolMode === 'text') {
+                    // 신규: 텍스트 스탬프 로직
+                    const txt = document.getElementById('textInputStr').value.trim();
+                    if(!txt) return alert("상단 옵션에서 스탬프로 찍을 텍스트를 먼저 입력해주세요!");
+                    const size = document.getElementById('textSize').value;
+                    const color = document.getElementById('colorPicker').value;
+                    
+                    WorkspaceSyncEngine.executeDrawText(e.offsetX, e.offsetY, txt, color, size);
+                    if(GlobalState.roomChannel) {
+                        GlobalState.roomChannel.send({type: 'broadcast', event: 'text', payload: {x: e.offsetX, y: e.offsetY, text: txt, color, size, sender: GlobalState.user.nickname}});
+                        GlobalState.roomParticipants.add(GlobalState.user.nickname);
+                    }
                 }
             },
+            
             placeReactionLocal: (x, y) => {
                 WorkspaceSyncEngine.spawnFloatingReaction(x, y, WorkspaceSyncEngine.currentEmoji);
                 if (GlobalState.roomChannel) {
@@ -707,31 +604,41 @@
                     GlobalState.roomParticipants.add(GlobalState.user.nickname);
                 }
             },
+            
             spawnFloatingReaction: (x, y, emoji) => {
-                const container = document.getElementById('canvasContainer');
+                const container = document.getElementById('canvasWrapper'); // 래퍼에 추가하여 절대 좌표 보정
                 const el = document.createElement('div'); el.className = 'floating-reaction'; el.innerText = emoji;
                 el.style.left = (x - 20) + 'px'; el.style.top = (y - 20) + 'px'; container.appendChild(el);
                 setTimeout(() => { if (el && el.parentNode) el.remove(); }, 3000);
             },
 
             processDrawingData: (e) => {
+                // [오류 수정 완료] offsetX, Y를 사용하여 완벽한 1:1 매칭 좌표 획득
                 const currentX = e.offsetX; const currentY = e.offsetY;
+                
                 if (GlobalState.roomChannel) {
                     GlobalState.roomChannel.send({ type: 'broadcast', event: 'cursor', payload: { x: currentX, y: currentY, sender: GlobalState.user.nickname } });
                 }
 
-                // 내 마우스 위치 패킷 추적 교정 (엘리먼트 내부 정렬 배치)
-                const canvasRect = WorkspaceSyncEngine.canvas.getBoundingClientRect();
-                const absoluteX = e.clientX - canvasRect.left;
-                const absoluteY = e.clientY - canvasRect.top;
-                WorkspaceSyncEngine.updateLiveCursor(absoluteX, absoluteY, GlobalState.user.nickname);
+                // 내 로컬 커서 업데이트
+                WorkspaceSyncEngine.updateLiveCursor(currentX, currentY, GlobalState.user.nickname);
 
-                if (!WorkspaceSyncEngine.isDrawing || WorkspaceSyncEngine.toolMode === 'stamp') return;
+                if (!WorkspaceSyncEngine.isDrawing || WorkspaceSyncEngine.toolMode === 'stamp' || WorkspaceSyncEngine.toolMode === 'text') return;
                 
                 const isEraser = WorkspaceSyncEngine.toolMode === 'eraser';
                 const color = isEraser ? "#ffffff" : document.getElementById('colorPicker').value;
                 const width = isEraser ? document.getElementById('eraserWidth').value : document.getElementById('lineWidth').value;
                 const brushType = isEraser ? 'solid' : document.getElementById('brushType').value;
+
+                // [점선펜 로직 개선] 천천히 그을 때 실선이 되는 버그 방지
+                if (brushType === 'dashed') {
+                    const dx = currentX - WorkspaceSyncEngine.lastDotX;
+                    const dy = currentY - WorkspaceSyncEngine.lastDotY;
+                    const distance = Math.sqrt(dx*dx + dy*dy);
+                    if (distance < Number(width) * 2.5) return; // 굵기의 2.5배 거리만큼 이동해야만 점을 찍음
+                    
+                    WorkspaceSyncEngine.lastDotX = currentX; WorkspaceSyncEngine.lastDotY = currentY;
+                }
 
                 WorkspaceSyncEngine.executeDrawStroke(WorkspaceSyncEngine.lastX, WorkspaceSyncEngine.lastY, currentX, currentY, color, width, brushType);
 
@@ -744,31 +651,35 @@
             
             executeDrawStroke: (x1, y1, x2, y2, color, width, brushType) => {
                 const c = WorkspaceSyncEngine.ctx; 
-                
-                // [오류 수정] 이전 드로잉의 섀도우 및 알파 스타일 오염 전면 리셋 공정 추가
                 c.save(); 
                 
-                c.strokeStyle = color; c.lineWidth = width; c.lineCap = 'round'; c.lineJoin = 'round';
-                c.globalAlpha = 1.0; c.shadowBlur = 0; c.shadowColor = 'transparent'; c.setLineDash([]);
-                
-                // 붓 타입별 개성 튜닝
-                if (brushType === 'highlighter') {
-                    c.globalAlpha = 0.35; // 형광펜 투명감 구현
-                } else if (brushType === 'shadow') {
-                    c.shadowBlur = 18; c.shadowColor = color; // 네온펜 발광 극대화
-                } else if (brushType === 'dashed') {
-                    c.setLineDash([Number(width) * 2.5, Number(width) * 2.5]); // 점선 패턴 간격 고정
-                } else if (brushType === 'marker') {
-                    c.globalAlpha = 0.75; c.lineCap = 'square'; c.lineJoin = 'miter'; // 각진 사각 마커 느낌 부여
-                }
+                if (brushType === 'dashed') {
+                    // 점선펜은 선이 아니라 정원(Circle) 스탬프로 찍어서 완벽한 패턴 유지
+                    c.globalAlpha = 1.0; c.fillStyle = color;
+                    c.beginPath(); c.arc(x2, y2, width / 2, 0, Math.PI * 2); c.fill();
+                } else {
+                    c.strokeStyle = color; c.lineWidth = width; c.lineCap = 'round'; c.lineJoin = 'round';
+                    c.globalAlpha = 1.0; c.shadowBlur = 0; c.shadowColor = 'transparent'; c.setLineDash([]);
+                    
+                    if (brushType === 'highlighter') { c.globalAlpha = 0.35; } 
+                    else if (brushType === 'shadow') { c.shadowBlur = 18; c.shadowColor = color; } 
+                    else if (brushType === 'marker') { c.globalAlpha = 0.75; c.lineCap = 'square'; c.lineJoin = 'miter'; }
 
-                c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
+                    c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
+                }
                 
-                c.restore(); // 스타일 롤백 처리
+                c.restore();
+            },
+            
+            executeDrawText: (x, y, text, color, size) => {
+                const c = WorkspaceSyncEngine.ctx; c.save();
+                c.font = `bold ${size}px sans-serif`; c.fillStyle = color;
+                c.fillText(text, x, y + Number(size)/3); // y축 보정
+                c.restore();
             },
 
             updateLiveCursor: (x, y, sender) => {
-                const container = document.getElementById('canvasContainer');
+                const container = document.getElementById('canvasWrapper'); // 위치 기준을 Wrapper로 통일
                 let cursorEl = document.getElementById('cursor_' + sender);
                 if (!cursorEl) {
                     cursorEl = document.createElement('div'); cursorEl.id = 'cursor_' + sender; cursorEl.className = 'live-cursor';
@@ -787,19 +698,21 @@
                 GlobalState.roomChannel
                     .on('broadcast', { event: 'draw' }, (payload) => { 
                         const d = payload.payload; 
-                        if (d.sender !== GlobalState.user.nickname) {
-                            WorkspaceSyncEngine.executeDrawStroke(d.x1, d.y1, d.x2, d.y2, d.color, d.width, d.brushType); 
-                        }
+                        if (d.sender !== GlobalState.user.nickname) { WorkspaceSyncEngine.executeDrawStroke(d.x1, d.y1, d.x2, d.y2, d.color, d.width, d.brushType); }
+                        if (d.sender) GlobalState.roomParticipants.add(d.sender); 
+                    })
+                    .on('broadcast', { event: 'text' }, (payload) => { 
+                        const d = payload.payload; 
+                        if (d.sender !== GlobalState.user.nickname) { WorkspaceSyncEngine.executeDrawText(d.x, d.y, d.text, d.color, d.size); }
                         if (d.sender) GlobalState.roomParticipants.add(d.sender); 
                     })
                     .on('broadcast', { event: 'chat' }, (payload) => { WorkspaceSyncEngine.appendUserMsg(payload.payload.sender, payload.payload.message); if (payload.payload.sender) GlobalState.roomParticipants.add(payload.payload.sender); })
                     .on('broadcast', { event: 'reaction' }, (payload) => { const d = payload.payload; WorkspaceSyncEngine.spawnFloatingReaction(d.x, d.y, d.emoji); if (d.sender) GlobalState.roomParticipants.add(d.sender); })
                     .on('broadcast', { event: 'cursor' }, (payload) => { 
                         const d = payload.payload; 
-                        if (d.sender !== GlobalState.user.nickname) {
-                            WorkspaceSyncEngine.updateLiveCursor(d.x, d.y, d.sender); 
-                        }
+                        if (d.sender !== GlobalState.user.nickname) { WorkspaceSyncEngine.updateLiveCursor(d.x, d.y, d.sender); }
                     })
+                    .on('broadcast', { event: 'clear' }, (payload) => { WorkspaceSyncEngine.clearCanvasLocal(); })
                     .on('broadcast', { event: 'request_sync' }, (payload) => { 
                         if (GlobalState.currentRoom && (GlobalState.currentRoom.createdBy === GlobalState.user.nickname || GlobalState.isAdmin)) {
                             const dataUrl = WorkspaceSyncEngine.canvas.toDataURL('image/png');
@@ -808,12 +721,15 @@
                     })
                     .on('broadcast', { event: 'sync_data' }, (payload) => {
                         const d = payload.payload;
-                        if (d.targetUser === GlobalState.user.nickname) {
-                            const img = new Image(); img.onload = () => { WorkspaceSyncEngine.ctx.drawImage(img, 0, 0); }; img.src = d.image;
-                        }
+                        if (d.targetUser === GlobalState.user.nickname) { const img = new Image(); img.onload = () => { WorkspaceSyncEngine.ctx.drawImage(img, 0, 0); }; img.src = d.image; }
+                    })
+                    .on('broadcast', { event: 'sync_data_all' }, (payload) => {
+                        const d = payload.payload;
+                        const img = new Image(); img.onload = () => { WorkspaceSyncEngine.clearCanvasLocal(); WorkspaceSyncEngine.ctx.drawImage(img, 0, 0); }; img.src = d.image;
                     })
                     .subscribe();
             },
+            
             sendChatPacket: () => {
                 const input = document.getElementById('chatInput'); const text = input.value.trim(); if (!text) return;
                 WorkspaceSyncEngine.appendUserMsg(GlobalState.user.nickname, text); input.value = '';
@@ -822,10 +738,12 @@
                     GlobalState.roomParticipants.add(GlobalState.user.nickname);
                 }
             },
+            
             appendUserMsg: (sender, msg) => {
                 const container = document.getElementById('chatMessages'); const div = document.createElement('div'); div.className = 'chat-msg';
                 div.innerHTML = `<b>${sender}:</b> ${msg}`; container.appendChild(div); container.scrollTop = container.scrollHeight;
             },
+            
             handleCloudAndLocalSave: async () => {
                 const saveBtn = document.getElementById('saveBtn'); saveBtn.disabled = true; saveBtn.innerText = "저장 중...";
                 try {
@@ -839,16 +757,14 @@
                     const { error: dbError } = await client.from('artworks').insert([{ room_name: GlobalState.currentRoom.name, image_url: publicUrl, creator: GlobalState.user.nickname, collaborators: collaboratorsList, is_featured: false }]);
                     if (dbError) throw dbError;
                     const a = document.createElement('a'); a.download = `export_${GlobalState.currentRoom.name}.png`; a.href = WorkspaceSyncEngine.canvas.toDataURL('image/png'); a.click();
-                    alert("성공적으로 저장되었습니다.");
-                } catch (err) { alert("저장 실패: " + err.message); } finally { saveBtn.disabled = false; saveBtn.innerText = "서버 & PC 저장"; }
+                    alert("성공적으로 다운로드 및 서버에 등록되었습니다!");
+                } catch (err) { alert("저장 실패: " + err.message); } finally { saveBtn.disabled = false; saveBtn.innerText = "이미지 다운로드 및 저장"; }
             }
         };
 
         window.onload = () => { 
-            AuthController.bindEvents(); 
-            SystemConfigController.bindAdminEvents(); 
-            RoomController.bindEvents(); 
-            CommunityController.bindEvents();
+            AuthController.bindEvents(); SystemConfigController.bindAdminEvents(); 
+            RoomController.bindEvents(); CommunityController.bindEvents();
             WorkspaceSyncEngine.initCanvasEngine(); 
         };
     </script>
