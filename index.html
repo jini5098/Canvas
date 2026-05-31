@@ -51,11 +51,14 @@
         
         .chat-container { width: 320px; background: var(--bg-surface); border-left: 2px solid var(--color-border); display: flex; flex-direction: column; z-index: 10; } .chat-header { padding: 18px; border-bottom: 2px solid var(--color-border); font-weight: 800; background: var(--color-secondary); display:flex; justify-content:space-between; align-items:center; } .chat-messages { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; } .chat-msg { font-size: 13px; line-height: 1.5; padding: 8px 12px; background: #f8fafc; border-radius: 8px; border: 1px solid var(--color-border); position: relative; } .chat-msg b { font-weight: 800; color: #b45309; } .chat-input-area { display: flex; padding: 16px; border-top: 2px solid var(--color-border); } .chat-input-area input { margin: 0; border-radius: 8px 0 0 8px; border-right: none; } .chat-input-area button { border-radius: 0 8px 8px 0; width: auto; }
         
-        .admin-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 10000; } .admin-modal-card { background: white; padding: 30px; border-radius: 16px; width: 750px; max-height: 85vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); display: flex; flex-direction: column; } .list-container { max-height: 350px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; } .list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; background: white; }
+        .admin-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 10000; } 
+        /* 관리자 모달창 대화면으로 확대 */
+        .admin-modal-card { background: white; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); display: flex; flex-direction: column; } 
+        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; background: white; margin-bottom: 8px; }
         
         .floating-reaction { position: absolute; font-size: 40px; pointer-events: none; animation: floatUpFade 2.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; z-index: 50; user-select: none; } @keyframes floatUpFade { 0% { opacity: 1; transform: translateY(0) scale(0.5); } 20% { transform: translateY(-15px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(1); } }
         
-        /* 🚨 마우스 닉네임 눌림 방지 & 글자 찌그러짐(호떡) 복구 완료! */
+        /* 마우스 닉네임 눌림 방지 & 글자 찌그러짐(호떡) 복구 */
         .live-cursor, .live-cursor * { pointer-events: none !important; user-select: none !important; touch-action: none !important; }
         .live-cursor { position: absolute; z-index: 100; left: 0; top: 0; will-change: transform; display: block; } 
         .cursor-pointer-svg { width: 18px; height: 18px; fill: #ef4444; filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.3)); position: absolute; left: 0; top: 0; } 
@@ -103,7 +106,7 @@
     </div>
 
     <div id="profileModal" class="admin-modal hidden">
-        <div class="admin-modal-card" style="width: 550px;">
+        <div class="admin-modal-card" style="width: 550px; padding: 24px;">
             <h2 style="margin-top:0; color:#0f172a; border-bottom:2px solid var(--color-border); padding-bottom:10px;">내 프로필</h2>
             
             <div style="margin-bottom: 24px; font-size: 14px; background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
@@ -131,10 +134,10 @@
         </div>
     </div>
 
-    <div id="noticeModal" class="admin-modal hidden"><div class="admin-modal-card" style="width:450px; border-top:6px solid var(--color-primary);"><h2 style="margin-top:0;">공지사항 안내</h2><div id="popupNoticeContent" style="background:#f8fafc; padding:16px; border-radius:8px; font-size:14px; line-height:1.6; white-space:pre-line; margin-bottom:20px;"></div><button class="btn-primary" id="closeNoticeModalBtn">확인했습니다</button></div></div>
-    <div id="editConfigModal" class="admin-modal hidden"><div class="admin-modal-card" style="width:500px; border-top:6px solid var(--color-danger);"><h2 id="editConfigTitle" style="margin-top:0;">내용 수정</h2><textarea id="editConfigContent" rows="10" style="font-family:inherit; resize:vertical; padding:12px; font-size:14px; line-height:1.5; margin-bottom:15px; border:2px solid var(--color-border); border-radius:8px; outline:none;"></textarea><div style="display:flex; gap:10px;"><button class="btn-primary" id="saveConfigBtn">저장하기</button><button class="btn-secondary" id="closeConfigModalBtn">취소</button></div></div></div>
-    <div id="postModal" class="admin-modal hidden"><div class="admin-modal-card" style="width:500px;"><h2 style="margin-top:0;">커뮤니티 글쓰기</h2><select id="postCategory"><option value="feedback">피드백 (오류/건의)</option><option value="idea">아이디어 공유</option><option value="free">자유게시판</option></select><input type="text" id="postTitle" placeholder="제목을 입력하세요"><textarea id="postContent" rows="6" placeholder="내용을 상세하게 입력하세요" style="font-family:inherit; resize:none;"></textarea><div style="display:flex; gap:10px;"><button class="btn-primary" id="submitPostBtn">등록하기</button><button class="btn-secondary" id="closePostModalBtn">취소</button></div></div></div>
-    <div id="viewPostModal" class="admin-modal hidden"><div class="admin-modal-card" style="width:600px; max-height:90vh;"><div style="flex-shrink:0;"><span id="viewPostCategory" style="background:var(--color-secondary); padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold;"></span><h2 id="viewPostTitle" style="margin:10px 0 4px 0;"></h2><div id="viewPostMeta" style="font-size:12px; color:var(--color-text-muted); margin-bottom:15px;"></div><div id="viewPostContent" style="background:#f8fafc; padding:20px; border-radius:8px; font-size:14px; line-height:1.6; min-height:80px; white-space:pre-line; margin-bottom:20px; border:1px solid #e2e8f0;"></div></div><div style="flex:1; overflow-y:auto; border-top:2px solid var(--color-border); margin-top:10px; padding-top:10px;"><h3 style="font-size:15px; margin-top:0;">댓글</h3><div id="commentList" style="margin-bottom:15px; min-height:50px;"></div></div><div style="display:flex; gap:8px; flex-shrink:0; margin-top:10px;"><input type="text" id="newCommentInput" placeholder="댓글을 남겨보세요..." style="margin:0;"><button class="btn-primary" id="submitCommentBtn" style="width:auto; white-space:nowrap;">작성</button></div><button class="btn-secondary" id="closeViewPostModalBtn" style="width:100%; margin-top:15px; flex-shrink:0;">닫기</button></div></div>
+    <div id="noticeModal" class="admin-modal hidden"><div class="admin-modal-card" style="width:450px; padding:24px; border-top:6px solid var(--color-primary);"><h2 style="margin-top:0;">공지사항 안내</h2><div id="popupNoticeContent" style="background:#f8fafc; padding:16px; border-radius:8px; font-size:14px; line-height:1.6; white-space:pre-line; margin-bottom:20px;"></div><button class="btn-primary" id="closeNoticeModalBtn">확인했습니다</button></div></div>
+    <div id="editConfigModal" class="admin-modal hidden"><div class="admin-modal-card" style="width:500px; padding:24px; border-top:6px solid var(--color-danger);"><h2 id="editConfigTitle" style="margin-top:0;">내용 수정</h2><textarea id="editConfigContent" rows="10" style="font-family:inherit; resize:vertical; padding:12px; font-size:14px; line-height:1.5; margin-bottom:15px; border:2px solid var(--color-border); border-radius:8px; outline:none;"></textarea><div style="display:flex; gap:10px;"><button class="btn-primary" id="saveConfigBtn">저장하기</button><button class="btn-secondary" id="closeConfigModalBtn">취소</button></div></div></div>
+    <div id="postModal" class="admin-modal hidden"><div class="admin-modal-card" style="width:500px; padding:24px;"><h2 style="margin-top:0;">커뮤니티 글쓰기</h2><select id="postCategory"><option value="feedback">피드백 (오류/건의)</option><option value="idea">아이디어 공유</option><option value="free">자유게시판</option></select><input type="text" id="postTitle" placeholder="제목을 입력하세요"><textarea id="postContent" rows="6" placeholder="내용을 상세하게 입력하세요" style="font-family:inherit; resize:none;"></textarea><div style="display:flex; gap:10px;"><button class="btn-primary" id="submitPostBtn">등록하기</button><button class="btn-secondary" id="closePostModalBtn">취소</button></div></div></div>
+    <div id="viewPostModal" class="admin-modal hidden"><div class="admin-modal-card" style="width:600px; padding:24px; max-height:90vh;"><div style="flex-shrink:0;"><span id="viewPostCategory" style="background:var(--color-secondary); padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold;"></span><h2 id="viewPostTitle" style="margin:10px 0 4px 0;"></h2><div id="viewPostMeta" style="font-size:12px; color:var(--color-text-muted); margin-bottom:15px;"></div><div id="viewPostContent" style="background:#f8fafc; padding:20px; border-radius:8px; font-size:14px; line-height:1.6; min-height:80px; white-space:pre-line; margin-bottom:20px; border:1px solid #e2e8f0;"></div></div><div style="flex:1; overflow-y:auto; border-top:2px solid var(--color-border); margin-top:10px; padding-top:10px;"><h3 style="font-size:15px; margin-top:0;">댓글</h3><div id="commentList" style="margin-bottom:15px; min-height:50px;"></div></div><div style="display:flex; gap:8px; flex-shrink:0; margin-top:10px;"><input type="text" id="newCommentInput" placeholder="댓글을 남겨보세요..." style="margin:0;"><button class="btn-primary" id="submitCommentBtn" style="width:auto; white-space:nowrap;">작성</button></div><button class="btn-secondary" id="closeViewPostModalBtn" style="width:100%; margin-top:15px; flex-shrink:0;">닫기</button></div></div>
 
     <div id="lobbyScreen">
         <div class="lobby-nav">
@@ -160,7 +163,7 @@
 
                 <div id="communityTabSection" class="hidden">
                     <div class="section-title">커뮤니티 게시판<div style="display:flex; gap:8px;"><select id="communityCategoryFilter" style="margin:0; padding:6px 12px; width:auto; background:white; font-size:13px;"><option value="all">전체 보기</option><option value="feedback">피드백</option><option value="idea">아이디어</option><option value="free">자유</option></select><button class="btn-primary" id="btnOpenWriteModal" style="width:auto; padding:6px 14px; font-size:13px;">글쓰기</button></div></div>
-                    <div id="communityPostList" class="list-container" style="max-height: 600px; background:white;"></div>
+                    <div id="communityPostList" class="list-container" style="max-height: 600px; padding:10px; border:none; background:white;"></div>
                 </div>
             </div>
 
@@ -172,48 +175,62 @@
         </div>
     </div>
 
-    <div id="adminModal" class="admin-modal hidden"><div class="admin-modal-card"><h2 style="margin:0 0 10px 0; color:#0f172a;">통합 관리자 제어판</h2><hr style="border:0; border-top:1px solid #e2e8f0; margin-bottom:20px;"><div id="adminUserList" class="list-container" style="margin-bottom: 20px;"></div><div id="adminReportList" class="list-container" style="margin-bottom: 20px; color:var(--color-danger);"></div><div id="adminArtworkList" class="list-container"></div><br><button class="btn-secondary" id="closeAdminModalBtn" style="width:100%; padding:14px; background:#f1f5f9;">제어판 닫기</button></div></div>
+    <div id="adminModal" class="admin-modal hidden">
+        <div class="admin-modal-card" style="width: 90vw; max-width: 1400px; height: 90vh; padding: 24px;">
+            <h2 style="margin:0 0 10px 0; color:#0f172a; flex-shrink: 0;">통합 관리자 제어판</h2>
+            <hr style="border:0; border-top:1px solid #e2e8f0; margin-bottom:15px; flex-shrink: 0;">
+            <div style="display: flex; gap: 20px; flex: 1; overflow: hidden;">
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 20px; min-width: 300px; overflow: hidden;">
+                    <div style="flex: 1; display: flex; flex-direction: column; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; overflow: hidden;">
+                        <h3 style="margin:0 0 10px 0; font-size:15px; border-bottom:1px solid #cbd5e1; padding-bottom:8px;">👤 유저 관리</h3>
+                        <div id="adminUserList" style="flex:1; overflow-y:auto; padding-right: 4px;"></div>
+                    </div>
+                    <div style="flex: 1; display: flex; flex-direction: column; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; overflow: hidden;">
+                        <h3 style="margin:0 0 10px 0; font-size:15px; color:#b91c1c; border-bottom:1px solid #fca5a5; padding-bottom:8px;">🚨 신고 내역</h3>
+                        <div id="adminReportList" style="flex:1; overflow-y:auto; padding-right: 4px;"></div>
+                    </div>
+                </div>
+                <div style="flex: 2; display: flex; flex-direction: column; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; overflow: hidden;">
+                    <h3 style="margin:0 0 10px 0; font-size:15px; border-bottom:1px solid #cbd5e1; padding-bottom:8px;">🖼️ 서버 그림 보관함 (한눈에 보기)</h3>
+                    <div id="adminArtworkList" style="flex:1; overflow-y:auto; display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; align-content: start; padding-right: 4px;"></div>
+                </div>
+            </div>
+            <button class="btn-secondary" id="closeAdminModalBtn" style="width:100%; padding:14px; background:#f1f5f9; margin-top:15px; flex-shrink:0;">제어판 닫기</button>
+        </div>
+    </div>
 
     <div id="mainWorkspace">
         <div id="toolbar">
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <button id="exitBtn" class="btn-secondary">나가기</button>
-                <div class="toolbar-divider"></div>
-                <div style="font-weight: 800; font-size: 15px; color: #b45309;" id="roomInfoDisplay">Workspace</div>
-                <button id="togglePrivacyBtn" class="btn-secondary" style="font-size: 12px; padding: 6px 12px;">상태: 공개</button>
+            <button id="exitBtn" class="btn-secondary">나가기</button>
+            <div class="toolbar-divider"></div>
+            <div style="font-weight: 800; font-size: 15px; color: #b45309;" id="roomInfoDisplay">Workspace</div>
+            <button id="togglePrivacyBtn" class="btn-secondary" style="margin-left: 8px; font-size: 12px; padding: 6px 12px;">상태: 공개</button>
+            <div class="toolbar-divider"></div>
+            
+            <button id="drawModeBtn" style="background: var(--color-text-main); color: white;">펜</button>
+            <button id="textModeBtn" class="btn-secondary">텍스트</button>
+            
+            <div id="penOptions" style="display: flex; align-items: center; gap: 8px;">
+                <select id="brushType" style="margin: 0; width: auto; padding: 6px; border-radius:6px;">
+                    <option value="solid">일반 펜</option>
+                    <option value="highlighter">형광펜</option>
+                    <option value="shadow">네온펜 (빛)</option>
+                    <option value="dashed">점선펜 (도트)</option>
+                    <option value="marker">마커펜 (사각)</option>
+                </select>
+                <input type="color" id="colorPicker" value="#0f172a" style="width: 32px; height: 32px; padding: 0; border: none; cursor: pointer; margin: 0; border-radius: 6px;">
+                <input type="range" id="lineWidth" min="1" max="50" value="3" style="margin: 0; width: 80px;">
+            </div>
+
+            <div id="textOptions" style="display: none; align-items: center; gap: 8px;">
+                <input type="text" id="textInputStr" placeholder="입력할 글자..." style="margin:0; width:120px; padding: 6px;">
+                <span style="font-size:12px; font-weight:bold;">크기</span>
+                <input type="number" id="textSize" value="20" style="width:50px; margin:0; padding:6px;">
             </div>
 
             <div class="toolbar-divider"></div>
-            
-            <div style="display: flex; align-items: center; gap: 4px; background: #f8fafc; padding: 4px; border-radius: 8px; border: 1px solid var(--color-border);">
-                <button id="drawModeBtn" style="background: var(--color-text-main); color: white;">펜</button>
-                <button id="textModeBtn" class="btn-secondary">텍스트</button>
-                <button id="eraserBtn" class="btn-secondary">지우개</button>
-                
-                <div id="penOptions" style="display: flex; align-items: center; gap: 8px; margin-left: 8px;">
-                    <select id="brushType" style="margin: 0; width: auto; padding: 6px; border-radius:6px;">
-                        <option value="solid">일반 펜</option>
-                        <option value="highlighter">형광펜</option>
-                        <option value="shadow">네온펜(빛)</option>
-                        <option value="dashed">점선펜</option>
-                        <option value="marker">마커펜(사각)</option>
-                    </select>
-                    <input type="color" id="colorPicker" value="#0f172a" style="width: 32px; height: 32px; padding: 0; border: none; cursor: pointer; border-radius: 6px;">
-                    <input type="range" id="lineWidth" min="1" max="50" value="3" style="width: 70px;">
-                </div>
-
-                <div id="textOptions" style="display: none; align-items: center; gap: 8px; margin-left: 8px;">
-                    <input type="text" id="textInputStr" placeholder="입력할 글자..." style="margin:0; width:120px; padding: 6px;">
-                    <span style="font-size:12px; font-weight:bold;">크기</span>
-                    <input type="number" id="textSize" value="20" style="width:50px; margin:0; padding:6px;">
-                </div>
-
-                <div id="eraserOptions" style="display: none; align-items: center; gap: 8px; margin-left: 8px;">
-                    <span style="font-size:12px; font-weight:bold;">굵기</span>
-                    <input type="range" id="eraserWidth" min="5" max="150" value="30" style="width: 70px;">
-                </div>
-            </div>
-
+            <button id="eraserBtn" class="btn-secondary">지우개</button>
+            <div id="eraserOptions" style="display: none; align-items: center; gap: 8px;"><span style="font-size:12px; font-weight:bold; color:var(--color-text-muted);">지우개 굵기</span><input type="range" id="eraserWidth" min="5" max="150" value="30" style="margin: 0; width: 100px;"></div>
             <div class="toolbar-divider"></div>
             
             <div class="reaction-bar" id="reactionBar">
@@ -224,18 +241,13 @@
             </div>
             
             <div class="toolbar-divider"></div>
+            <button id="toggleGridBtn" class="btn-secondary">모눈종이</button>
+            <button id="undoBtn" class="btn-secondary" style="margin-left:4px;" title="되돌리기 (모든 사용자 화면 동기화)">⏪ 되돌리기</button>
+            <button id="clearBtn" class="btn-secondary" style="margin-left: 4px;">초기화</button>
             
-            <div style="display: flex; align-items: center; gap: 4px;">
-                <button id="toggleGridBtn" class="btn-secondary">모눈종이</button>
-                <button id="undoBtn" class="btn-secondary" title="실행 취소">⏪ 취소</button>
-                <button id="redoBtn" class="btn-secondary" title="다시 실행">⏩ 다시</button>
-                <button id="clearBtn" class="btn-secondary">초기화</button>
-            </div>
-            
-            <div style="display: flex; gap: 8px; margin-left: auto;">
-                <button id="workspaceReportBtn" class="btn-danger">🚨 신고</button>
-                <button id="saveBtn" class="btn-primary" style="width:auto;">다운로드/저장</button>
-            </div>
+            <div class="toolbar-divider"></div>
+            <button id="workspaceReportBtn" class="btn-danger" style="margin-left:auto;">🚨 신고</button>
+            <button id="saveBtn" class="btn-primary" style="margin-left: 8px; width:auto;">이미지 다운로드 및 저장</button>
         </div>
         
         <div id="workspaceContent">
@@ -309,6 +321,7 @@
                 const { data: profile } = await client.from('profiles').select('*').eq('email', email).single();
                 if (profile && profile.is_banned) { await client.auth.signOut(); return alert("운영 원칙 위배로 영구 차단된 계정입니다."); }
                 
+                // 기간 정지 체크
                 const { data: tempBan } = await client.from('system_settings').select('*').eq('key', `ban_${email}`).single();
                 if (tempBan) {
                     const banDate = new Date(tempBan.value);
@@ -442,10 +455,18 @@
                 }
             },
             loadFeaturedArtwork: async () => {
-                const { data } = await client.from('artworks').select('*').eq('is_featured', true).order('created_at', { ascending: false }).limit(1);
-                if (data && data.length > 0) {
-                    document.getElementById('featuredArtworkContainer').innerHTML = `<img src="${data[0].image_url}" alt="우수작">`;
-                    document.getElementById('featuredMeta').innerText = `방: ${data[0].room_name} / 작가: ${data[0].creator}`;
+                const { data } = await client.from('artworks').select('*').eq('is_featured', true).order('created_at', { ascending: false });
+                
+                // 탈락된 작품 목록 불러오기 (우수작 제외용)
+                const { data: dropData } = await client.from('system_settings').select('*').eq('key', 'dropped_artworks').single();
+                const droppedIds = dropData && dropData.value ? JSON.parse(dropData.value) : [];
+                
+                // 탈락되지 않은 진짜 우수작 찾기
+                const validFeatured = data ? data.find(art => !droppedIds.includes(art.id)) : null;
+
+                if (validFeatured) {
+                    document.getElementById('featuredArtworkContainer').innerHTML = `<img src="${validFeatured.image_url}" alt="우수작">`;
+                    document.getElementById('featuredMeta').innerText = `방: ${validFeatured.room_name} / 작가: ${validFeatured.creator}`;
                 } else {
                     document.getElementById('featuredArtworkContainer').innerHTML = `<span style="color:var(--color-text-muted); font-size:13px;">채택된 작품이 없습니다</span>`;
                     document.getElementById('featuredMeta').innerText = "";
@@ -547,22 +568,60 @@
                 });
             },
             deleteReport: async (id) => { await client.from('reports').delete().eq('id', id); SystemConfigController.loadAdminReportList(); },
-            deleteArtwork: async (id) => {
-                if(!confirm("정말 이 작품을 삭제하시겠습니까? (서버에서도 영구 삭제됩니다)")) return;
-                await client.from('artworks').delete().eq('id', id); alert("작품이 삭제되었습니다."); SystemConfigController.loadAdminArtworkList(); SystemConfigController.loadFeaturedArtwork(); 
-            },
+            
+            // 🚨 탈락(소프트 삭제) 로직 적용 및 갤러리 뷰 렌더링
             loadAdminArtworkList: async () => {
-                const listContainer = document.getElementById('adminArtworkList'); const { data } = await client.from('artworks').select('*').order('created_at', { ascending: false }); listContainer.innerHTML = '';
+                const listContainer = document.getElementById('adminArtworkList'); 
+                const { data } = await client.from('artworks').select('*').order('created_at', { ascending: false }); 
+                
+                // 탈락된 작품 ID 목록 가져오기
+                const { data: dropData } = await client.from('system_settings').select('*').eq('key', 'dropped_artworks').single();
+                const droppedIds = dropData && dropData.value ? JSON.parse(dropData.value) : [];
+
+                listContainer.innerHTML = '';
                 if (!data || data.length === 0) return listContainer.innerHTML = '<p style="padding:10px;">저장된 작품이 없습니다.</p>';
-                data.forEach(art => {
-                    const div = document.createElement('div'); div.className = 'list-item';
-                    div.innerHTML = `<div><a href="${art.image_url}" target="_blank" style="font-weight:700; color:#b45309;">[작품 원본 보기]</a><br><b>세션방:</b> ${art.room_name} | <b>저장자:</b> ${art.creator}</div>
-                        <div style="display:flex; gap:6px; align-items:center;">
-                            ${art.is_featured ? '<span style="color:green; font-weight:700; margin-right:8px;">★ 메인 채택됨</span>' : `<button class="btn-secondary" style="font-size:12px; padding:6px 12px;" onclick="SystemConfigController.adoptArtwork('${art.id}')">메인 전시</button>`}
-                            <button class="btn-danger" style="font-size:12px; padding:6px 12px;" onclick="SystemConfigController.deleteArtwork('${art.id}')">삭제</button>
+                
+                // 탈락된 작품은 화면에서 제외
+                const visibleArtworks = data.filter(art => !droppedIds.includes(art.id));
+                if (visibleArtworks.length === 0) return listContainer.innerHTML = '<p style="padding:10px;">표시할 작품이 없습니다 (모두 탈락됨).</p>';
+
+                visibleArtworks.forEach(art => {
+                    const div = document.createElement('div'); 
+                    div.style.cssText = "background:white; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; display:flex; flex-direction:column;";
+                    div.innerHTML = `
+                        <div style="height:140px; background:#e2e8f0; cursor:pointer;" onclick="window.open('${art.image_url}')">
+                            <img src="${art.image_url}" style="width:100%; height:100%; object-fit:cover;">
+                        </div>
+                        <div style="padding:8px; font-size:11px; line-height:1.4;">
+                            <b>${art.room_name}</b><br>
+                            <span style="color:#64748b;">저장: ${art.creator}</span><br>
+                            <span style="color:#94a3b8;">${new Date(art.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <div style="display:flex; gap:4px; padding:8px; border-top:1px solid #e2e8f0; background:#f8fafc;">
+                            ${art.is_featured ? '<span style="color:green; font-weight:700; flex:1; text-align:center; font-size:12px;">★ 메인 채택됨</span>' : `<button class="btn-secondary" style="flex:1; font-size:11px; padding:6px;" onclick="SystemConfigController.adoptArtwork('${art.id}')">메인 전시</button>`}
+                            <button class="btn-danger" style="flex:1; font-size:11px; padding:6px;" onclick="SystemConfigController.dropArtwork('${art.id}')">탈락(숨김)</button>
                         </div>`;
                     listContainer.appendChild(div);
                 });
+            },
+            dropArtwork: async (id) => {
+                if(!confirm("이 작품을 관리자 목록에서 숨김(탈락) 처리하시겠습니까?\n(서버 원본 데이터는 보존됩니다)")) return;
+                
+                try {
+                    const { data: dropData } = await client.from('system_settings').select('*').eq('key', 'dropped_artworks').single();
+                    let droppedIds = [];
+                    if (dropData && dropData.value) {
+                        try { droppedIds = JSON.parse(dropData.value); } catch(e){}
+                    }
+                    if (!droppedIds.includes(id)) droppedIds.push(id);
+                    
+                    await client.from('system_settings').upsert({ key: 'dropped_artworks', value: JSON.stringify(droppedIds) });
+                    alert("목록에서 탈락 처리되었습니다."); 
+                    SystemConfigController.loadAdminArtworkList();
+                    SystemConfigController.loadFeaturedArtwork(); // 로비 화면 우수작 갱신
+                } catch(err) {
+                    alert("탈락 처리 실패: " + err.message);
+                }
             },
             adoptArtwork: async (id) => {
                 await client.from('artworks').update({ is_featured: false }).eq('is_featured', true);
@@ -894,8 +953,6 @@
                 if (GlobalState.roomChannel) {
                     GlobalState.roomChannel.send({ type: 'broadcast', event: 'cursor', payload: { x: currentX, y: currentY, sender: GlobalState.user.nickname } });
                 }
-
-                // 더 이상 내 마우스에는 덜거덕거리는 이름표를 만들지 않음! (삭제 완료)
 
                 if (!WorkspaceSyncEngine.isDrawing || WorkspaceSyncEngine.toolMode === 'stamp' || WorkspaceSyncEngine.toolMode === 'text') return;
                 
