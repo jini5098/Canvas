@@ -55,7 +55,6 @@
         
         .floating-reaction { position: absolute; font-size: 40px; pointer-events: none; animation: floatUpFade 2.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; z-index: 50; user-select: none; } @keyframes floatUpFade { 0% { opacity: 1; transform: translateY(0) scale(0.5); } 20% { transform: translateY(-15px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(1); } }
         
-        /* 🚨 마우스 닉네임 눌림 방지 (완벽 적용) */
         .live-cursor { position: absolute; pointer-events: none !important; z-index: 100; left: 0; top: 0; will-change: transform; display: block; user-select: none; } 
         .cursor-pointer-svg { width: 18px; height: 18px; fill: #ef4444; filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.3)); position: absolute; left: 0; top: 0; pointer-events: none !important; user-select: none; } 
         .cursor-label { background: #ef4444; color: white; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 12px; position: absolute; top: 14px; left: 12px; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2); pointer-events: none !important; user-select: none; }
@@ -79,6 +78,7 @@
                     <span style="padding: 0 10px; font-size: 12px; font-weight: bold;">또는</span>
                     <hr style="flex:1; border:0; border-top:1px solid var(--color-border);">
                 </div>
+                
                 <button class="btn-secondary" id="doGuestLoginBtn" style="width:100%; border-color:#94a3b8; color:#475569;">👀 게스트로 둘러보기 (그리기만 가능)</button>
                 
                 <div class="auth-toggle" id="doResetPwBtn" style="margin-top: 18px;">비밀번호를 잊으셨나요?</div>
@@ -100,14 +100,19 @@
         </div>
     </div>
 
+    <!-- 내 프로필 팝업 모달 -->
     <div id="profileModal" class="admin-modal hidden">
         <div class="admin-modal-card" style="width: 550px;">
             <h2 style="margin-top:0; color:#0f172a; border-bottom:2px solid var(--color-border); padding-bottom:10px;">내 프로필</h2>
             
             <div style="margin-bottom: 24px; font-size: 14px; background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                     <span style="color:var(--color-text-muted);">현재 닉네임</span>
-                    <strong id="modalProfileNick" style="font-size:16px;">-</strong>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <strong id="modalProfileNick" style="font-size:16px;">-</strong>
+                        <!-- 신규: 닉네임 수정 버튼 -->
+                        <button class="btn-secondary" id="editProfileBtn" style="padding: 4px 10px; font-size: 11px;">수정</button>
+                    </div>
                 </div>
                 <div style="display: flex; justify-content: space-between;">
                     <span style="color:var(--color-text-muted);">계정 상태</span>
@@ -117,7 +122,7 @@
 
             <h3 style="font-size: 16px; margin: 0 0 12px 0;">내 그림 보관함</h3>
             <div id="modalMyArtworks" class="room-grid" style="grid-template-columns: repeat(2, 1fr); max-height: 350px; overflow-y: auto; gap: 12px; margin-bottom: 0;">
-                </div>
+            </div>
             
             <div style="display: flex; gap: 10px; margin-top: 24px;">
                 <button class="btn-danger" style="flex: 1;" onclick="location.reload()">로그아웃 및 처음으로</button>
@@ -126,6 +131,7 @@
         </div>
     </div>
 
+    <!-- 공지/게시판/어드민 모달 -->
     <div id="noticeModal" class="admin-modal hidden"><div class="admin-modal-card" style="width:450px; border-top:6px solid var(--color-primary);"><h2 style="margin-top:0;">공지사항 안내</h2><div id="popupNoticeContent" style="background:#f8fafc; padding:16px; border-radius:8px; font-size:14px; line-height:1.6; white-space:pre-line; margin-bottom:20px;"></div><button class="btn-primary" id="closeNoticeModalBtn">확인했습니다</button></div></div>
     <div id="editConfigModal" class="admin-modal hidden"><div class="admin-modal-card" style="width:500px; border-top:6px solid var(--color-danger);"><h2 id="editConfigTitle" style="margin-top:0;">내용 수정</h2><textarea id="editConfigContent" rows="10" style="font-family:inherit; resize:vertical; padding:12px; font-size:14px; line-height:1.5; margin-bottom:15px; border:2px solid var(--color-border); border-radius:8px; outline:none;"></textarea><div style="display:flex; gap:10px;"><button class="btn-primary" id="saveConfigBtn">저장하기</button><button class="btn-secondary" id="closeConfigModalBtn">취소</button></div></div></div>
     <div id="postModal" class="admin-modal hidden"><div class="admin-modal-card" style="width:500px;"><h2 style="margin-top:0;">커뮤니티 글쓰기</h2><select id="postCategory"><option value="feedback">피드백 (오류/건의)</option><option value="idea">아이디어 공유</option><option value="free">자유게시판</option></select><input type="text" id="postTitle" placeholder="제목을 입력하세요"><textarea id="postContent" rows="6" placeholder="내용을 상세하게 입력하세요" style="font-family:inherit; resize:none;"></textarea><div style="display:flex; gap:10px;"><button class="btn-primary" id="submitPostBtn">등록하기</button><button class="btn-secondary" id="closePostModalBtn">취소</button></div></div></div>
@@ -215,6 +221,8 @@
                 <button class="reaction-btn" onclick="WorkspaceSyncEngine.setToolModeAndEmoji('👍')">👍</button>
                 <button class="reaction-btn" onclick="WorkspaceSyncEngine.setToolModeAndEmoji('❤️')">❤️</button>
                 <button class="reaction-btn" onclick="WorkspaceSyncEngine.setToolModeAndEmoji('😂')">😂</button>
+                <!-- AI 특별 추가 기능: 폭죽 파티 버튼 -->
+                <button class="reaction-btn" onclick="WorkspaceSyncEngine.triggerConfettiLocal()" title="모두에게 폭죽 터뜨리기!" style="background:#fef9c3; border-color:#facc15;">🎉</button>
             </div>
             
             <div class="toolbar-divider"></div>
@@ -340,7 +348,39 @@
             bindEvents: () => {
                 document.getElementById('userGreetingMsg').addEventListener('click', ProfileController.openProfileModal);
                 document.getElementById('closeProfileModalBtn').addEventListener('click', () => document.getElementById('profileModal').classList.add('hidden'));
+                
+                // 신규: 프로필 수정 버튼 리스너
+                document.getElementById('editProfileBtn').addEventListener('click', ProfileController.handleEditNickname);
             },
+            
+            handleEditNickname: async () => {
+                if (GlobalState.user.isGuest) return alert("게스트는 닉네임을 변경할 수 없습니다.");
+                
+                const newNick = prompt("새로운 닉네임을 입력하세요 (최대 10자):", GlobalState.user.nickname);
+                if (!newNick || newNick.trim() === '' || newNick === GlobalState.user.nickname) return;
+                if (newNick.length > 10) return alert("닉네임은 10자 이내로 입력해주세요.");
+
+                try {
+                    // 데이터베이스 닉네임 업데이트
+                    const { error } = await client.from('profiles').update({ nickname: newNick }).eq('id', GlobalState.user.id);
+                    if (error) throw error;
+
+                    // 상태 업데이트 및 화면 즉시 반영
+                    GlobalState.user.nickname = newNick;
+                    
+                    if (GlobalState.isAdmin) {
+                        document.getElementById('userGreetingMsg').innerHTML = `<span>${newNick}</span> <span class="admin-badge">Admin</span>`;
+                    } else {
+                        document.getElementById('userGreetingMsg').innerText = newNick;
+                    }
+                    document.getElementById('modalProfileNick').innerText = newNick;
+                    
+                    alert("닉네임이 성공적으로 변경되었습니다!");
+                } catch (err) {
+                    alert("닉네임 변경 실패: " + err.message);
+                }
+            },
+            
             openProfileModal: async () => {
                 if(!GlobalState.user) return;
                 
@@ -423,6 +463,7 @@
                 if(!reason || reason.trim() === '') return alert("신고 사유를 입력해야 접수됩니다.");
                 
                 try {
+                    // target_user 로 완벽히 수정 반영
                     const { error } = await client.from('reports').insert([{ 
                         reporter: GlobalState.user.nickname, 
                         target_user: targetUser, 
@@ -765,6 +806,39 @@
                 setTimeout(() => { if (el && el.parentNode) el.remove(); }, 3000);
             },
 
+            /* 신규 추가: 폭죽 파티 효과 발동 */
+            triggerConfettiLocal: () => {
+                WorkspaceSyncEngine.spawnConfetti();
+                if (GlobalState.roomChannel) {
+                    GlobalState.roomChannel.send({ type: 'broadcast', event: 'confetti', payload: { sender: GlobalState.user.nickname } });
+                }
+            },
+
+            spawnConfetti: () => {
+                const colors = ['#ef4444', '#3b82f6', '#10b981', '#facc15', '#a855f7'];
+                for(let i=0; i<50; i++) {
+                    const el = document.createElement('div');
+                    el.style.position = 'fixed';
+                    el.style.left = Math.random() * 100 + 'vw';
+                    el.style.top = '-20px';
+                    el.style.width = '10px';
+                    el.style.height = '10px';
+                    el.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                    el.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+                    el.style.pointerEvents = 'none';
+                    el.style.zIndex = '99999';
+                    document.body.appendChild(el);
+
+                    const duration = Math.random() * 2 + 1.5;
+                    el.animate([
+                        { transform: `translate3d(0,0,0) rotate(0deg)`, opacity: 1 },
+                        { transform: `translate3d(${Math.random()*200 - 100}px, 100vh, 0) rotate(${Math.random()*720}deg)`, opacity: 0 }
+                    ], { duration: duration * 1000, easing: 'cubic-bezier(.37,0,.63,1)', forwards: true });
+
+                    setTimeout(() => el.remove(), duration * 1000);
+                }
+            },
+
             processDrawingData: (e) => {
                 const currentX = e.offsetX; const currentY = e.offsetY;
                 
@@ -856,6 +930,7 @@
                     })
                     .on('broadcast', { event: 'chat' }, (payload) => { WorkspaceSyncEngine.appendUserMsg(payload.payload.sender, payload.payload.message); if (payload.payload.sender) GlobalState.roomParticipants.add(payload.payload.sender); })
                     .on('broadcast', { event: 'reaction' }, (payload) => { const d = payload.payload; WorkspaceSyncEngine.spawnFloatingReaction(d.x, d.y, d.emoji); if (d.sender) GlobalState.roomParticipants.add(d.sender); })
+                    .on('broadcast', { event: 'confetti' }, (payload) => { WorkspaceSyncEngine.spawnConfetti(); if (payload.payload.sender) GlobalState.roomParticipants.add(payload.payload.sender); })
                     .on('broadcast', { event: 'cursor' }, (payload) => { 
                         const d = payload.payload; 
                         if (d.sender !== GlobalState.user.nickname) { WorkspaceSyncEngine.updateLiveCursor(d.x, d.y, d.sender); }
