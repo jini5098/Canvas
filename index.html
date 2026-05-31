@@ -55,9 +55,11 @@
         
         .floating-reaction { position: absolute; font-size: 40px; pointer-events: none; animation: floatUpFade 2.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; z-index: 50; user-select: none; } @keyframes floatUpFade { 0% { opacity: 1; transform: translateY(0) scale(0.5); } 20% { transform: translateY(-15px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(1); } }
         
-        .live-cursor { position: absolute; pointer-events: none !important; z-index: 100; left: 0; top: 0; will-change: transform; display: block; user-select: none; } 
-        .cursor-pointer-svg { width: 18px; height: 18px; fill: #ef4444; filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.3)); position: absolute; left: 0; top: 0; pointer-events: none !important; user-select: none; } 
-        .cursor-label { background: #ef4444; color: white; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 12px; position: absolute; top: 14px; left: 12px; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2); pointer-events: none !important; user-select: none; }
+        /* 🚨 마우스 닉네임 눌림 완벽 방지: 요소 전체 차단 */
+        .live-cursor, .live-cursor * { pointer-events: none !important; user-select: none !important; touch-action: none !important; }
+        .live-cursor { position: absolute; z-index: 100; left: 0; top: 0; will-change: transform; display: block; } 
+        .cursor-pointer-svg { width: 18px; height: 18px; fill: #ef4444; filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.3)); position: absolute; left: 0; top: 0; } 
+        .cursor-label { background: #ef4444; color: white; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 12px; position: absolute; top: 14px; left: 12px; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         
         .reaction-btn { background: white; border: 2px solid var(--color-border); border-radius: 50%; width: 36px; height: 36px; font-size: 18px; display: flex; justify-content: center; align-items: center; cursor: pointer; padding: 0; transition: 0.2s; } .reaction-btn:hover { transform: scale(1.1); border-color: var(--color-primary); } .reaction-bar { display: flex; gap: 6px; padding: 0 8px; border-left: 2px solid var(--color-border); border-right: 2px solid var(--color-border); }
         .comment-box { background: white; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 8px; font-size: 13px; }
@@ -110,7 +112,6 @@
                     <span style="color:var(--color-text-muted);">현재 닉네임</span>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <strong id="modalProfileNick" style="font-size:16px;">-</strong>
-                        <!-- 신규: 닉네임 수정 버튼 -->
                         <button class="btn-secondary" id="editProfileBtn" style="padding: 4px 10px; font-size: 11px;">수정</button>
                     </div>
                 </div>
@@ -173,6 +174,7 @@
         </div>
     </div>
 
+    <!-- 관리자 모달 -->
     <div id="adminModal" class="admin-modal hidden"><div class="admin-modal-card"><h2 style="margin:0 0 10px 0; color:#0f172a;">통합 관리자 제어판</h2><hr style="border:0; border-top:1px solid #e2e8f0; margin-bottom:20px;"><div id="adminUserList" class="list-container" style="margin-bottom: 20px;"></div><div id="adminReportList" class="list-container" style="margin-bottom: 20px; color:var(--color-danger);"></div><div id="adminArtworkList" class="list-container"></div><br><button class="btn-secondary" id="closeAdminModalBtn" style="width:100%; padding:14px; background:#f1f5f9;">제어판 닫기</button></div></div>
 
     <div id="mainWorkspace">
@@ -221,7 +223,6 @@
                 <button class="reaction-btn" onclick="WorkspaceSyncEngine.setToolModeAndEmoji('👍')">👍</button>
                 <button class="reaction-btn" onclick="WorkspaceSyncEngine.setToolModeAndEmoji('❤️')">❤️</button>
                 <button class="reaction-btn" onclick="WorkspaceSyncEngine.setToolModeAndEmoji('😂')">😂</button>
-                <!-- AI 특별 추가 기능: 폭죽 파티 버튼 -->
                 <button class="reaction-btn" onclick="WorkspaceSyncEngine.triggerConfettiLocal()" title="모두에게 폭죽 터뜨리기!" style="background:#fef9c3; border-color:#facc15;">🎉</button>
             </div>
             
@@ -243,7 +244,8 @@
         <div id="workspaceContent">
             <div class="canvas-container" id="canvasContainer">
                 <div id="canvasWrapper" class="canvas-wrapper">
-                    <canvas id="drawingBoard" width="1100" height="700"></canvas>
+                    <!-- 모눈종이를 완벽히 보이게 하기 위해 캔버스 배경을 투명하게 설정 -->
+                    <canvas id="drawingBoard" width="1100" height="700" style="background: transparent;"></canvas>
                 </div>
             </div>
             <div class="chat-container">
@@ -309,7 +311,20 @@
                 if (error) return alert("로그인 실패: " + error.message);
 
                 const { data: profile } = await client.from('profiles').select('*').eq('email', email).single();
-                if (profile && profile.is_banned) { await client.auth.signOut(); return alert("운영 원칙 위배로 차단된 계정입니다."); }
+                if (profile && profile.is_banned) { await client.auth.signOut(); return alert("운영 원칙 위배로 영구 차단된 계정입니다."); }
+                
+                // 🚨 기간 정지 체크
+                const { data: tempBan } = await client.from('system_settings').select('*').eq('key', `ban_${email}`).single();
+                if (tempBan) {
+                    const banDate = new Date(tempBan.value);
+                    if (new Date() < banDate) {
+                        await client.auth.signOut();
+                        return alert(`운영 원칙 위배로 이용이 정지되었습니다.\n정지 해제일: ${banDate.toLocaleString()}`);
+                    } else {
+                        await client.from('system_settings').delete().eq('key', `ban_${email}`);
+                    }
+                }
+
                 if (!profile) await client.from('profiles').insert([{ id: data.user.id, email: data.user.email, nickname: data.user.user_metadata.nickname || '유저' }]);
 
                 GlobalState.user = { id: data.user.id, email: data.user.email, nickname: data.user.user_metadata.nickname || '유저', isGuest: false };
@@ -348,8 +363,6 @@
             bindEvents: () => {
                 document.getElementById('userGreetingMsg').addEventListener('click', ProfileController.openProfileModal);
                 document.getElementById('closeProfileModalBtn').addEventListener('click', () => document.getElementById('profileModal').classList.add('hidden'));
-                
-                // 신규: 프로필 수정 버튼 리스너
                 document.getElementById('editProfileBtn').addEventListener('click', ProfileController.handleEditNickname);
             },
             
@@ -361,11 +374,9 @@
                 if (newNick.length > 10) return alert("닉네임은 10자 이내로 입력해주세요.");
 
                 try {
-                    // 데이터베이스 닉네임 업데이트
                     const { error } = await client.from('profiles').update({ nickname: newNick }).eq('id', GlobalState.user.id);
                     if (error) throw error;
 
-                    // 상태 업데이트 및 화면 즉시 반영
                     GlobalState.user.nickname = newNick;
                     
                     if (GlobalState.isAdmin) {
@@ -463,7 +474,6 @@
                 if(!reason || reason.trim() === '') return alert("신고 사유를 입력해야 접수됩니다.");
                 
                 try {
-                    // target_user 로 완벽히 수정 반영
                     const { error } = await client.from('reports').insert([{ 
                         reporter: GlobalState.user.nickname, 
                         target_user: targetUser, 
@@ -474,19 +484,65 @@
                     alert(`정상적으로 접수되었습니다. 관리자 확인 후 조치됩니다.`);
                 } catch(err) { alert("신고 접수 실패: " + err.message); }
             },
+            
+            // 🚨 관리자 기능 수정: 기간 정지, 영구 정지, 정지 해제
             loadAdminUserList: async () => {
-                const listContainer = document.getElementById('adminUserList'); const { data } = await client.from('profiles').select('*').order('created_at', { ascending: false }); listContainer.innerHTML = '';
-                data.forEach(user => {
-                    const div = document.createElement('div'); div.className = 'list-item'; const isBanned = user.is_banned;
-                    div.innerHTML = `<div><strong style="${isBanned ? 'color:red; text-decoration:line-through;' : ''}">${user.nickname}</strong> <span style="color:#64748b;">(${user.email})</span></div>
-                        <button class="btn-secondary" style="padding:4px 8px; font-size:11px; border-color:${isBanned ? 'green' : 'red'}; color:${isBanned ? 'green' : 'red'};" onclick="SystemConfigController.toggleUserBan('${user.id}', ${isBanned})">${isBanned ? '차단 해제' : '영구 차단'}</button>`;
-                    if (user.id !== GlobalState.user.id) listContainer.appendChild(div);
+                const listContainer = document.getElementById('adminUserList'); 
+                const { data: users } = await client.from('profiles').select('*').order('created_at', { ascending: false }); 
+                
+                // 기간 정지 데이터 가져오기
+                const { data: tempBans } = await client.from('system_settings').select('*').like('key', 'ban_%');
+                const banMap = {};
+                if(tempBans) tempBans.forEach(b => { banMap[b.key.replace('ban_', '')] = new Date(b.value); });
+
+                listContainer.innerHTML = '';
+                users.forEach(user => {
+                    if (user.id === GlobalState.user.id) return;
+                    
+                    const div = document.createElement('div'); div.className = 'list-item'; 
+                    const isPermBanned = user.is_banned;
+                    const tempBanDate = banMap[user.email];
+                    const isTempBanned = tempBanDate && (new Date() < tempBanDate);
+                    
+                    let statusHtml = '';
+                    if(isPermBanned) statusHtml = '<span style="color:red; font-size:11px; font-weight:bold;">[영구정지]</span>';
+                    else if(isTempBanned) statusHtml = `<span style="color:#b45309; font-size:11px; font-weight:bold;">[${tempBanDate.toLocaleDateString()} 까지 정지]</span>`;
+
+                    div.innerHTML = `
+                        <div><strong style="${isPermBanned || isTempBanned ? 'color:red; text-decoration:line-through;' : ''}">${user.nickname}</strong> <span style="color:#64748b;">(${user.email})</span> <br>${statusHtml}</div>
+                        <div style="display:flex; gap:4px;">
+                            ${(isPermBanned || isTempBanned) ? 
+                                `<button class="btn-secondary" style="padding:4px 8px; font-size:11px; border-color:green; color:green;" onclick="SystemConfigController.unbanUser('${user.id}', '${user.email}')">정지 해제</button>` 
+                                : 
+                                `<button class="btn-secondary" style="padding:4px 8px; font-size:11px; border-color:#b45309; color:#b45309;" onclick="SystemConfigController.tempBanUser('${user.email}')">기간 정지</button>
+                                 <button class="btn-secondary" style="padding:4px 8px; font-size:11px; border-color:red; color:red;" onclick="SystemConfigController.permBanUser('${user.id}')">영구 정지</button>`
+                            }
+                        </div>`;
+                    listContainer.appendChild(div);
                 });
             },
-            toggleUserBan: async (userId, currentStatus) => {
-                if(!confirm(currentStatus ? "차단을 해제하시겠습니까?" : "해당 유저의 로그인을 영구 차단하시겠습니까?")) return;
-                await client.from('profiles').update({ is_banned: !currentStatus }).eq('id', userId); SystemConfigController.loadAdminUserList();
+            tempBanUser: async (email) => {
+                const days = prompt("며칠 동안 이용을 정지하시겠습니까? (숫자만 입력)\n예: 3, 7, 30");
+                if (!days || isNaN(days)) return;
+                const banUntil = new Date();
+                banUntil.setDate(banUntil.getDate() + parseInt(days));
+                
+                await client.from('system_settings').upsert({ key: `ban_${email}`, value: banUntil.toISOString() });
+                alert(`${days}일 동안 이용이 정지되었습니다.`);
+                SystemConfigController.loadAdminUserList();
             },
+            permBanUser: async (userId) => {
+                if(!confirm("이 유저를 영구 차단하시겠습니까?")) return;
+                await client.from('profiles').update({ is_banned: true }).eq('id', userId);
+                SystemConfigController.loadAdminUserList();
+            },
+            unbanUser: async (userId, email) => {
+                if(!confirm("정지를 해제하시겠습니까?")) return;
+                await client.from('profiles').update({ is_banned: false }).eq('id', userId);
+                await client.from('system_settings').delete().eq('key', `ban_${email}`);
+                SystemConfigController.loadAdminUserList();
+            },
+            
             loadAdminReportList: async () => {
                 const listContainer = document.getElementById('adminReportList'); const { data } = await client.from('reports').select('*').order('created_at', { ascending: false }); listContainer.innerHTML = '';
                 if(!data || data.length === 0) return listContainer.innerHTML = '<p style="padding:10px; color:#64748b;">접수된 신고 없음</p>';
@@ -665,6 +721,8 @@
 
             initCanvasEngine: () => {
                 WorkspaceSyncEngine.canvas = document.getElementById('drawingBoard'); WorkspaceSyncEngine.ctx = WorkspaceSyncEngine.canvas.getContext('2d');
+                
+                // 모눈종이를 완벽히 보이게 하기 위해 캔버스 초기화를 투명하게 설정
                 WorkspaceSyncEngine.clearCanvasLocal();
 
                 WorkspaceSyncEngine.canvas.addEventListener('mousedown', WorkspaceSyncEngine.handleMouseDown);
@@ -695,7 +753,7 @@
                 });
             },
             
-            clearCanvasLocal: () => { WorkspaceSyncEngine.ctx.fillStyle = "#ffffff"; WorkspaceSyncEngine.ctx.fillRect(0, 0, WorkspaceSyncEngine.canvas.width, WorkspaceSyncEngine.canvas.height); },
+            clearCanvasLocal: () => { WorkspaceSyncEngine.ctx.clearRect(0, 0, WorkspaceSyncEngine.canvas.width, WorkspaceSyncEngine.canvas.height); },
             
             setToolMode: (mode) => {
                 WorkspaceSyncEngine.toolMode = mode;
@@ -806,7 +864,6 @@
                 setTimeout(() => { if (el && el.parentNode) el.remove(); }, 3000);
             },
 
-            /* 신규 추가: 폭죽 파티 효과 발동 */
             triggerConfettiLocal: () => {
                 WorkspaceSyncEngine.spawnConfetti();
                 if (GlobalState.roomChannel) {
@@ -851,9 +908,9 @@
                 if (!WorkspaceSyncEngine.isDrawing || WorkspaceSyncEngine.toolMode === 'stamp' || WorkspaceSyncEngine.toolMode === 'text') return;
                 
                 const isEraser = WorkspaceSyncEngine.toolMode === 'eraser';
-                const color = isEraser ? "#ffffff" : document.getElementById('colorPicker').value;
+                const color = document.getElementById('colorPicker').value;
                 const width = isEraser ? document.getElementById('eraserWidth').value : document.getElementById('lineWidth').value;
-                const brushType = isEraser ? 'solid' : document.getElementById('brushType').value;
+                const brushType = isEraser ? 'eraser' : document.getElementById('brushType').value;
 
                 if (brushType === 'dashed') {
                     const dx = currentX - WorkspaceSyncEngine.lastDotX;
@@ -873,11 +930,17 @@
                 WorkspaceSyncEngine.lastX = currentX; WorkspaceSyncEngine.lastY = currentY;
             },
             
+            // 🚨 지우개 방식 투명화 적용 (모눈종이 유지)
             executeDrawStroke: (x1, y1, x2, y2, color, width, brushType) => {
                 const c = WorkspaceSyncEngine.ctx; 
                 c.save(); 
                 
-                if (brushType === 'dashed') {
+                if (brushType === 'eraser') {
+                    c.globalCompositeOperation = 'destination-out';
+                    c.strokeStyle = 'rgba(0,0,0,1)';
+                    c.lineWidth = width; c.lineCap = 'round'; c.lineJoin = 'round';
+                    c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
+                } else if (brushType === 'dashed') {
                     c.globalAlpha = 1.0; c.fillStyle = color;
                     c.beginPath(); c.arc(x2, y2, width / 2, 0, Math.PI * 2); c.fill();
                 } else {
@@ -967,15 +1030,25 @@
                 div.innerHTML = `<b>${sender}:</b> ${msg}`; container.appendChild(div); container.scrollTop = container.scrollHeight;
             },
             
+            getExportCanvas: () => {
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = WorkspaceSyncEngine.canvas.width; tempCanvas.height = WorkspaceSyncEngine.canvas.height;
+                const tCtx = tempCanvas.getContext('2d');
+                tCtx.fillStyle = '#ffffff'; tCtx.fillRect(0,0, tempCanvas.width, tempCanvas.height);
+                tCtx.drawImage(WorkspaceSyncEngine.canvas, 0, 0);
+                return tempCanvas;
+            },
+
             handleCloudAndLocalSave: async () => {
                 if (GlobalState.user.isGuest) {
-                    const a = document.createElement('a'); a.download = `export_${GlobalState.currentRoom.name}.png`; a.href = WorkspaceSyncEngine.canvas.toDataURL('image/png'); a.click();
+                    const a = document.createElement('a'); a.download = `export_${GlobalState.currentRoom.name}.png`; 
+                    a.href = WorkspaceSyncEngine.getExportCanvas().toDataURL('image/png'); a.click();
                     return alert("게스트는 로컬 기기 다운로드만 지원됩니다.");
                 }
 
                 const saveBtn = document.getElementById('saveBtn'); saveBtn.disabled = true; saveBtn.innerText = "저장 중...";
                 try {
-                    const blob = await new Promise(resolve => WorkspaceSyncEngine.canvas.toBlob(resolve, 'image/png'));
+                    const blob = await new Promise(resolve => WorkspaceSyncEngine.getExportCanvas().toBlob(resolve, 'image/png'));
                     const fileName = `art_${Date.now()}_${Math.random().toString(36).substr(2, 5)}.png`;
                     const { error: storageError } = await client.storage.from('artworks').upload(fileName, blob);
                     if (storageError) throw storageError;
@@ -984,7 +1057,8 @@
                     const collaboratorsList = Array.from(GlobalState.roomParticipants).join(', ');
                     const { error: dbError } = await client.from('artworks').insert([{ room_name: GlobalState.currentRoom.name, image_url: publicUrl, creator: GlobalState.user.nickname, collaborators: collaboratorsList, is_featured: false }]);
                     if (dbError) throw dbError;
-                    const a = document.createElement('a'); a.download = `export_${GlobalState.currentRoom.name}.png`; a.href = WorkspaceSyncEngine.canvas.toDataURL('image/png'); a.click();
+                    const a = document.createElement('a'); a.download = `export_${GlobalState.currentRoom.name}.png`; 
+                    a.href = WorkspaceSyncEngine.getExportCanvas().toDataURL('image/png'); a.click();
                     alert("성공적으로 다운로드 및 서버에 등록되었습니다!");
                 } catch (err) { alert("저장 실패: " + err.message); } finally { saveBtn.disabled = false; saveBtn.innerText = "다운로드/저장"; }
             }
