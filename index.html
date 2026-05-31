@@ -55,11 +55,11 @@
         
         .floating-reaction { position: absolute; font-size: 40px; pointer-events: none; animation: floatUpFade 2.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; z-index: 50; user-select: none; } @keyframes floatUpFade { 0% { opacity: 1; transform: translateY(0) scale(0.5); } 20% { transform: translateY(-15px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(1); } }
         
-        /* 🚨 마우스 닉네임 눌림 완벽 방지: 요소 전체 차단 */
+        /* 🚨 마우스 닉네임 눌림 방지 & 글자 찌그러짐(호떡) 복구 완료! */
         .live-cursor, .live-cursor * { pointer-events: none !important; user-select: none !important; touch-action: none !important; }
         .live-cursor { position: absolute; z-index: 100; left: 0; top: 0; will-change: transform; display: block; } 
         .cursor-pointer-svg { width: 18px; height: 18px; fill: #ef4444; filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.3)); position: absolute; left: 0; top: 0; } 
-        .cursor-label { background: #ef4444; color: white; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 12px; position: absolute; top: 14px; left: 12px; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .cursor-label { background: #ef4444; color: white; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 12px; position: absolute; top: 14px; left: 12px; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2); line-height: normal; }
         
         .reaction-btn { background: white; border: 2px solid var(--color-border); border-radius: 50%; width: 36px; height: 36px; font-size: 18px; display: flex; justify-content: center; align-items: center; cursor: pointer; padding: 0; transition: 0.2s; } .reaction-btn:hover { transform: scale(1.1); border-color: var(--color-primary); } .reaction-bar { display: flex; gap: 6px; padding: 0 8px; border-left: 2px solid var(--color-border); border-right: 2px solid var(--color-border); }
         .comment-box { background: white; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 8px; font-size: 13px; }
@@ -102,7 +102,6 @@
         </div>
     </div>
 
-    <!-- 내 프로필 팝업 모달 -->
     <div id="profileModal" class="admin-modal hidden">
         <div class="admin-modal-card" style="width: 550px;">
             <h2 style="margin-top:0; color:#0f172a; border-bottom:2px solid var(--color-border); padding-bottom:10px;">내 프로필</h2>
@@ -132,7 +131,6 @@
         </div>
     </div>
 
-    <!-- 공지/게시판/어드민 모달 -->
     <div id="noticeModal" class="admin-modal hidden"><div class="admin-modal-card" style="width:450px; border-top:6px solid var(--color-primary);"><h2 style="margin-top:0;">공지사항 안내</h2><div id="popupNoticeContent" style="background:#f8fafc; padding:16px; border-radius:8px; font-size:14px; line-height:1.6; white-space:pre-line; margin-bottom:20px;"></div><button class="btn-primary" id="closeNoticeModalBtn">확인했습니다</button></div></div>
     <div id="editConfigModal" class="admin-modal hidden"><div class="admin-modal-card" style="width:500px; border-top:6px solid var(--color-danger);"><h2 id="editConfigTitle" style="margin-top:0;">내용 수정</h2><textarea id="editConfigContent" rows="10" style="font-family:inherit; resize:vertical; padding:12px; font-size:14px; line-height:1.5; margin-bottom:15px; border:2px solid var(--color-border); border-radius:8px; outline:none;"></textarea><div style="display:flex; gap:10px;"><button class="btn-primary" id="saveConfigBtn">저장하기</button><button class="btn-secondary" id="closeConfigModalBtn">취소</button></div></div></div>
     <div id="postModal" class="admin-modal hidden"><div class="admin-modal-card" style="width:500px;"><h2 style="margin-top:0;">커뮤니티 글쓰기</h2><select id="postCategory"><option value="feedback">피드백 (오류/건의)</option><option value="idea">아이디어 공유</option><option value="free">자유게시판</option></select><input type="text" id="postTitle" placeholder="제목을 입력하세요"><textarea id="postContent" rows="6" placeholder="내용을 상세하게 입력하세요" style="font-family:inherit; resize:none;"></textarea><div style="display:flex; gap:10px;"><button class="btn-primary" id="submitPostBtn">등록하기</button><button class="btn-secondary" id="closePostModalBtn">취소</button></div></div></div>
@@ -174,7 +172,6 @@
         </div>
     </div>
 
-    <!-- 관리자 모달 -->
     <div id="adminModal" class="admin-modal hidden"><div class="admin-modal-card"><h2 style="margin:0 0 10px 0; color:#0f172a;">통합 관리자 제어판</h2><hr style="border:0; border-top:1px solid #e2e8f0; margin-bottom:20px;"><div id="adminUserList" class="list-container" style="margin-bottom: 20px;"></div><div id="adminReportList" class="list-container" style="margin-bottom: 20px; color:var(--color-danger);"></div><div id="adminArtworkList" class="list-container"></div><br><button class="btn-secondary" id="closeAdminModalBtn" style="width:100%; padding:14px; background:#f1f5f9;">제어판 닫기</button></div></div>
 
     <div id="mainWorkspace">
@@ -244,7 +241,6 @@
         <div id="workspaceContent">
             <div class="canvas-container" id="canvasContainer">
                 <div id="canvasWrapper" class="canvas-wrapper">
-                    <!-- 모눈종이를 완벽히 보이게 하기 위해 캔버스 배경을 투명하게 설정 -->
                     <canvas id="drawingBoard" width="1100" height="700" style="background: transparent;"></canvas>
                 </div>
             </div>
@@ -313,7 +309,6 @@
                 const { data: profile } = await client.from('profiles').select('*').eq('email', email).single();
                 if (profile && profile.is_banned) { await client.auth.signOut(); return alert("운영 원칙 위배로 영구 차단된 계정입니다."); }
                 
-                // 🚨 기간 정지 체크
                 const { data: tempBan } = await client.from('system_settings').select('*').eq('key', `ban_${email}`).single();
                 if (tempBan) {
                     const banDate = new Date(tempBan.value);
@@ -485,12 +480,10 @@
                 } catch(err) { alert("신고 접수 실패: " + err.message); }
             },
             
-            // 🚨 관리자 기능 수정: 기간 정지, 영구 정지, 정지 해제
             loadAdminUserList: async () => {
                 const listContainer = document.getElementById('adminUserList'); 
                 const { data: users } = await client.from('profiles').select('*').order('created_at', { ascending: false }); 
                 
-                // 기간 정지 데이터 가져오기
                 const { data: tempBans } = await client.from('system_settings').select('*').like('key', 'ban_%');
                 const banMap = {};
                 if(tempBans) tempBans.forEach(b => { banMap[b.key.replace('ban_', '')] = new Date(b.value); });
@@ -722,7 +715,6 @@
             initCanvasEngine: () => {
                 WorkspaceSyncEngine.canvas = document.getElementById('drawingBoard'); WorkspaceSyncEngine.ctx = WorkspaceSyncEngine.canvas.getContext('2d');
                 
-                // 모눈종이를 완벽히 보이게 하기 위해 캔버스 초기화를 투명하게 설정
                 WorkspaceSyncEngine.clearCanvasLocal();
 
                 WorkspaceSyncEngine.canvas.addEventListener('mousedown', WorkspaceSyncEngine.handleMouseDown);
@@ -903,7 +895,7 @@
                     GlobalState.roomChannel.send({ type: 'broadcast', event: 'cursor', payload: { x: currentX, y: currentY, sender: GlobalState.user.nickname } });
                 }
 
-                WorkspaceSyncEngine.updateLiveCursor(currentX, currentY, GlobalState.user.nickname);
+                // 더 이상 내 마우스에는 덜거덕거리는 이름표를 만들지 않음! (삭제 완료)
 
                 if (!WorkspaceSyncEngine.isDrawing || WorkspaceSyncEngine.toolMode === 'stamp' || WorkspaceSyncEngine.toolMode === 'text') return;
                 
@@ -930,7 +922,6 @@
                 WorkspaceSyncEngine.lastX = currentX; WorkspaceSyncEngine.lastY = currentY;
             },
             
-            // 🚨 지우개 방식 투명화 적용 (모눈종이 유지)
             executeDrawStroke: (x1, y1, x2, y2, color, width, brushType) => {
                 const c = WorkspaceSyncEngine.ctx; 
                 c.save(); 
@@ -1060,7 +1051,7 @@
                     const a = document.createElement('a'); a.download = `export_${GlobalState.currentRoom.name}.png`; 
                     a.href = WorkspaceSyncEngine.getExportCanvas().toDataURL('image/png'); a.click();
                     alert("성공적으로 다운로드 및 서버에 등록되었습니다!");
-                } catch (err) { alert("저장 실패: " + err.message); } finally { saveBtn.disabled = false; saveBtn.innerText = "다운로드/저장"; }
+                } catch (err) { alert("저장 실패: " + err.message); } finally { saveBtn.disabled = false; saveBtn.innerText = "이미지 다운로드 및 저장"; }
             }
         };
 
