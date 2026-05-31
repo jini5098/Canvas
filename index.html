@@ -24,7 +24,10 @@
         
         #lobbyScreen { display: none; flex-direction: column; padding: 0; flex: 1; overflow-y: auto; }
         .lobby-nav { background: var(--bg-surface); padding: 16px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--color-border); position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); } .lobby-nav h1 { margin: 0; font-size: 24px; font-weight: 800; color: var(--color-text-main); }
-        .nav-actions { display: flex; gap: 12px; align-items: center; } .user-badge { background: var(--color-secondary); color: var(--color-text-main); padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 700; border: 1px solid var(--color-border); display: flex; align-items: center; gap: 6px; } .admin-badge { background: var(--color-danger); color: white; padding: 2px 6px; border-radius: 8px; font-size: 11px; }
+        .nav-actions { display: flex; gap: 12px; align-items: center; } 
+        .user-badge { background: var(--color-secondary); color: var(--color-text-main); padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 700; border: 1px solid var(--color-border); display: flex; align-items: center; gap: 6px; cursor: pointer; transition: 0.2s; } 
+        .user-badge:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-color: var(--color-primary-hover); }
+        .admin-badge { background: var(--color-danger); color: white; padding: 2px 6px; border-radius: 8px; font-size: 11px; }
         #adminPanelBtn { display: none; background: #0f172a; color: white; width: auto; padding: 10px 24px; white-space: nowrap !important; flex-shrink: 0; }
         
         .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 30px; padding: 40px; max-width: 1500px; margin: 0 auto; width: 100%; box-sizing: border-box; }
@@ -52,7 +55,6 @@
         
         .floating-reaction { position: absolute; font-size: 40px; pointer-events: none; animation: floatUpFade 2.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; z-index: 50; user-select: none; } @keyframes floatUpFade { 0% { opacity: 1; transform: translateY(0) scale(0.5); } 20% { transform: translateY(-15px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(1); } }
         
-        /* 마우스 커서 클릭 방해 문제 완벽 해결 */
         .live-cursor { position: absolute; pointer-events: none !important; z-index: 100; left: 0; top: 0; will-change: transform; display: block; } 
         .cursor-pointer-svg { width: 18px; height: 18px; fill: #ef4444; filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.3)); position: absolute; left: 0; top: 0; pointer-events: none !important; user-select: none; } 
         .cursor-label { background: #ef4444; color: white; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 12px; position: absolute; top: 14px; left: 12px; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2); pointer-events: none !important; user-select: none; }
@@ -76,9 +78,9 @@
                     <span style="padding: 0 10px; font-size: 12px; font-weight: bold;">또는</span>
                     <hr style="flex:1; border:0; border-top:1px solid var(--color-border);">
                 </div>
-                <div style="display: flex; gap: 8px; margin-bottom: 14px;">
-                    <button class="btn-secondary" id="doGoogleLoginBtn" style="flex:1;">Google 로그인</button>
-                    <button class="btn-secondary" id="doGithubLoginBtn" style="flex:1;">GitHub 로그인</button>
+                
+                <div style="margin-bottom: 14px;">
+                    <button id="doKakaoLoginBtn" style="width: 100%; background-color: #FEE500; color: #191919; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 800; font-size: 14px; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">💬 카카오 계정으로 시작하기</button>
                 </div>
                 <button class="btn-secondary" id="doGuestLoginBtn" style="width:100%; border-color:#94a3b8; color:#475569;">👀 게스트로 둘러보기 (그리기만 가능)</button>
                 
@@ -101,6 +103,32 @@
         </div>
     </div>
 
+    <div id="profileModal" class="admin-modal hidden">
+        <div class="admin-modal-card" style="width: 550px;">
+            <h2 style="margin-top:0; color:#0f172a; border-bottom:2px solid var(--color-border); padding-bottom:10px;">내 프로필</h2>
+            
+            <div style="margin-bottom: 24px; font-size: 14px; background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color:var(--color-text-muted);">현재 닉네임</span>
+                    <strong id="modalProfileNick" style="font-size:16px;">-</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color:var(--color-text-muted);">계정 상태</span>
+                    <span id="modalProfileStatus">-</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 16px; margin: 0 0 12px 0;">내 그림 보관함</h3>
+            <div id="modalMyArtworks" class="room-grid" style="grid-template-columns: repeat(2, 1fr); max-height: 350px; overflow-y: auto; gap: 12px; margin-bottom: 0;">
+                </div>
+            
+            <div style="display: flex; gap: 10px; margin-top: 24px;">
+                <button class="btn-danger" style="flex: 1;" onclick="location.reload()">로그아웃</button>
+                <button class="btn-secondary" id="closeProfileModalBtn" style="flex: 2;">닫기</button>
+            </div>
+        </div>
+    </div>
+
     <div id="noticeModal" class="admin-modal hidden"><div class="admin-modal-card" style="width:450px; border-top:6px solid var(--color-primary);"><h2 style="margin-top:0;">공지사항 안내</h2><div id="popupNoticeContent" style="background:#f8fafc; padding:16px; border-radius:8px; font-size:14px; line-height:1.6; white-space:pre-line; margin-bottom:20px;"></div><button class="btn-primary" id="closeNoticeModalBtn">확인했습니다</button></div></div>
     <div id="editConfigModal" class="admin-modal hidden"><div class="admin-modal-card" style="width:500px; border-top:6px solid var(--color-danger);"><h2 id="editConfigTitle" style="margin-top:0;">내용 수정</h2><textarea id="editConfigContent" rows="10" style="font-family:inherit; resize:vertical; padding:12px; font-size:14px; line-height:1.5; margin-bottom:15px; border:2px solid var(--color-border); border-radius:8px; outline:none;"></textarea><div style="display:flex; gap:10px;"><button class="btn-primary" id="saveConfigBtn">저장하기</button><button class="btn-secondary" id="closeConfigModalBtn">취소</button></div></div></div>
     <div id="postModal" class="admin-modal hidden"><div class="admin-modal-card" style="width:500px;"><h2 style="margin-top:0;">커뮤니티 글쓰기</h2><select id="postCategory"><option value="feedback">피드백 (오류/건의)</option><option value="idea">아이디어 공유</option><option value="free">자유게시판</option></select><input type="text" id="postTitle" placeholder="제목을 입력하세요"><textarea id="postContent" rows="6" placeholder="내용을 상세하게 입력하세요" style="font-family:inherit; resize:none;"></textarea><div style="display:flex; gap:10px;"><button class="btn-primary" id="submitPostBtn">등록하기</button><button class="btn-secondary" id="closePostModalBtn">취소</button></div></div></div>
@@ -110,7 +138,7 @@
         <div class="lobby-nav">
             <h1>Live Workspace</h1>
             <div class="nav-actions">
-                <div class="user-badge" id="userGreetingMsg">연결 중</div>
+                <div class="user-badge" id="userGreetingMsg" title="내 프로필 및 그림 보기">연결 중</div>
                 <button id="adminPanelBtn" class="btn-secondary">관리자 제어판</button>
                 <button class="btn-primary" id="showCreateRoomModalBtn" style="width: auto;">+ 새로운 방 만들기</button>
             </div>
@@ -135,21 +163,6 @@
             </div>
 
             <div class="side-panel">
-                <div class="info-box">
-                    <h3 style="color: #0f172a;">내 프로필</h3>
-                    <div style="font-size:13px; color:var(--color-text-main); display:flex; flex-direction:column; gap:8px;">
-                        <div style="display:flex; justify-content:space-between;"><span>현재 접속:</span> <b id="profileNickDisplay">-</b></div>
-                        <div style="display:flex; justify-content:space-between;"><span>계정 상태:</span> <span id="profileStatusDisplay">-</span></div>
-                        
-                        <div style="margin-top: 10px; font-weight: 800; border-top: 1px solid var(--color-border); padding-top: 10px;">내 최근 저장 그림</div>
-                        <div class="best-artwork-box" id="myArtworkContainer" style="height: 120px;">
-                            <span style="color:var(--color-text-muted); font-size:12px;">저장한 그림이 없습니다.</span>
-                        </div>
-                        
-                        <button class="btn-secondary" style="margin-top:10px; width:100%; font-size:12px;" onclick="location.reload()">로그아웃 및 처음으로</button>
-                    </div>
-                </div>
-
                 <div class="info-box" style="border-color: var(--color-primary); background: var(--bg-base);"><h3 style="color: #b45309;">이주의 우수 채택작</h3><div class="best-artwork-box" id="featuredArtworkContainer"><span style="color:var(--color-text-muted); font-size:13px;">채택된 작품이 없습니다</span></div><p style="font-size: 12px; text-align: center; color: var(--color-text-muted); margin: 8px 0 0 0;" id="featuredMeta"></p></div>
                 <div class="info-box"><h3>공지사항 <button id="editNoticeBtn" class="btn-secondary hidden" style="float:right; padding:2px 8px; font-size:11px;">편집</button></h3><div class="info-list" id="noticeContent">로딩 중...</div></div>
                 <div class="info-box"><h3>사용법 가이드 <button id="editGuideBtn" class="btn-secondary hidden" style="float:right; padding:2px 8px; font-size:11px;">편집</button></h3><div class="info-list" id="guideContent">로딩 중...</div></div>
@@ -265,18 +278,15 @@
                 document.getElementById('doResetPwBtn').addEventListener('click', AuthController.handleResetPassword);
                 document.getElementById('doUpdatePwBtn').addEventListener('click', AuthController.handleExecuteUpdatePw);
                 
-                // 신규: OAuth 및 게스트 로그인 리스너
+                // 카카오 로그인 연결 (구글/깃허브 삭제)
+                document.getElementById('doKakaoLoginBtn').addEventListener('click', () => client.auth.signInWithOAuth({ provider: 'kakao' }));
                 document.getElementById('doGuestLoginBtn').addEventListener('click', AuthController.handleGuestLogin);
-                document.getElementById('doGoogleLoginBtn').addEventListener('click', () => client.auth.signInWithOAuth({ provider: 'google' }));
-                document.getElementById('doGithubLoginBtn').addEventListener('click', () => client.auth.signInWithOAuth({ provider: 'github' }));
             },
             handleGuestLogin: () => {
                 const guestId = Math.floor(Math.random() * 90000) + 10000;
                 GlobalState.user = { id: `guest_${guestId}`, email: 'guest@local', nickname: `Guest_${guestId}`, isGuest: true };
                 
                 document.getElementById('userGreetingMsg').innerText = GlobalState.user.nickname + ' (게스트)';
-                document.getElementById('profileNickDisplay').innerText = GlobalState.user.nickname;
-                document.getElementById('profileStatusDisplay').innerHTML = '<span style="color:var(--color-text-muted);">게스트 (권한제한)</span>';
                 
                 ViewToggle.showScreen('lobby');
                 CommunityController.switchTab('rooms');
@@ -308,16 +318,11 @@
                     document.getElementById('userGreetingMsg').innerHTML = `<span>${GlobalState.user.nickname}</span> <span class="admin-badge">Admin</span>`;
                 } else { document.getElementById('userGreetingMsg').innerText = GlobalState.user.nickname; }
 
-                // 프로필 위젯 정보 세팅
-                document.getElementById('profileNickDisplay').innerText = GlobalState.user.nickname;
-                document.getElementById('profileStatusDisplay').innerHTML = '<span style="color:green; font-weight:bold;">정식 회원</span>';
-                
                 ViewToggle.showScreen('lobby');
                 CommunityController.switchTab('rooms');
                 
                 SystemConfigController.loadSettings(true); 
                 SystemConfigController.loadFeaturedArtwork();
-                ProfileController.loadMyArtwork();
                 CommunityController.loadPosts();
             },
             handleResetPassword: async () => {
@@ -338,15 +343,48 @@
         };
 
         const ProfileController = {
-            loadMyArtwork: async () => {
-                if (GlobalState.user.isGuest) return;
-                const { data, error } = await client.from('artworks').select('*').eq('creator', GlobalState.user.nickname).order('created_at', { ascending: false }).limit(1);
-                const container = document.getElementById('myArtworkContainer');
-                if (data && data.length > 0) {
-                    container.innerHTML = `<img src="${data[0].image_url}" alt="내 그림" onclick="window.open('${data[0].image_url}')" style="cursor:pointer;">`;
-                } else {
-                    container.innerHTML = `<span style="color:var(--color-text-muted); font-size:12px;">저장한 그림이 없습니다.</span>`;
+            bindEvents: () => {
+                document.getElementById('userGreetingMsg').addEventListener('click', ProfileController.openProfileModal);
+                document.getElementById('closeProfileModalBtn').addEventListener('click', () => document.getElementById('profileModal').classList.add('hidden'));
+            },
+            openProfileModal: async () => {
+                if(!GlobalState.user) return;
+                
+                document.getElementById('modalProfileNick').innerText = GlobalState.user.nickname;
+                document.getElementById('modalProfileStatus').innerHTML = GlobalState.user.isGuest ? 
+                    '<span style="color:var(--color-text-muted);">게스트 (권한제한)</span>' : 
+                    '<span style="color:green; font-weight:bold;">정식 회원</span>';
+                
+                const container = document.getElementById('modalMyArtworks');
+                container.innerHTML = '<div style="grid-column:1/-1; padding:20px; text-align:center;">로딩 중...</div>';
+                document.getElementById('profileModal').classList.remove('hidden');
+
+                if (GlobalState.user.isGuest) {
+                    container.innerHTML = '<div style="grid-column:1/-1; padding:20px; text-align:center; color:#64748b;">게스트는 서버에 저장된 그림이 없습니다.</div>';
+                    return;
                 }
+
+                const { data, error } = await client.from('artworks').select('*').eq('creator', GlobalState.user.nickname).order('created_at', { ascending: false });
+                
+                if (error || !data || data.length === 0) {
+                    container.innerHTML = '<div style="grid-column:1/-1; padding:20px; text-align:center; color:#64748b;">저장한 그림이 없습니다.</div>';
+                    return;
+                }
+
+                container.innerHTML = '';
+                data.forEach(art => {
+                    const div = document.createElement('div');
+                    div.style.cssText = "border: 2px solid var(--color-border); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; background: white;";
+                    div.innerHTML = `
+                        <div style="height: 110px; background: #f8fafc; display: flex; justify-content: center; align-items: center; overflow: hidden; cursor: pointer;" onclick="window.open('${art.image_url}')">
+                            <img src="${art.image_url}" style="width: 100%; height: 100%; object-fit: cover; transition: 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                        </div>
+                        <div style="padding: 8px; font-size: 11px; text-align: center; border-top: 1px solid #e2e8f0;">
+                            <b>${art.room_name}</b><br><span style="color:var(--color-text-muted);">${new Date(art.created_at).toLocaleDateString()}</span>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
             }
         };
 
@@ -391,7 +429,12 @@
                 if(!reason || reason.trim() === '') return alert("신고 사유를 입력해야 접수됩니다.");
                 
                 try {
-                    const { error } = await client.from('reports').insert([{ reporter: GlobalState.user.nickname, reported_user: targetUser, reason: reason, content: "워크스페이스 내부 직접 신고" }]);
+                    const { error } = await client.from('reports').insert([{ 
+                        reporter: GlobalState.user.nickname, 
+                        target_user: targetUser, 
+                        reason: reason, 
+                        content: "워크스페이스 내부 직접 신고" 
+                    }]);
                     if(error) throw error; 
                     alert(`정상적으로 접수되었습니다. 관리자 확인 후 조치됩니다.`);
                 } catch(err) { alert("신고 접수 실패: " + err.message); }
@@ -414,7 +457,7 @@
                 if(!data || data.length === 0) return listContainer.innerHTML = '<p style="padding:10px; color:#64748b;">접수된 신고 없음</p>';
                 data.forEach(rep => {
                     const div = document.createElement('div'); div.className = 'list-item';
-                    div.innerHTML = `<div style="line-height:1.4;"><span style="color:red; font-weight:bold;">[대상: ${rep.reported_user}]</span> 사유: ${rep.reason}<br><small style="color:#64748b;">신고자: ${rep.reporter}</small></div>
+                    div.innerHTML = `<div style="line-height:1.4;"><span style="color:red; font-weight:bold;">[대상: ${rep.target_user}]</span> 사유: ${rep.reason}<br><small style="color:#64748b;">신고자: ${rep.reporter}</small></div>
                         <button class="btn-danger" style="font-size:11px; padding:4px 8px;" onclick="SystemConfigController.deleteReport('${rep.id}')">종료</button>`;
                     listContainer.appendChild(div);
                 });
@@ -449,7 +492,6 @@
                 document.getElementById('tabRoomsBtn').addEventListener('click', () => CommunityController.switchTab('rooms'));
                 document.getElementById('tabCommunityBtn').addEventListener('click', () => CommunityController.switchTab('community'));
                 
-                // 글쓰기 권한 차단
                 document.getElementById('btnOpenWriteModal').addEventListener('click', () => {
                     if (GlobalState.user.isGuest) return alert("커뮤니티 글쓰기는 정식 회원가입 후 가능합니다.");
                     document.getElementById('postModal').classList.remove('hidden');
@@ -514,7 +556,6 @@
 
         const RoomController = {
             bindEvents: () => {
-                // 방 개설 권한 차단
                 document.getElementById('showCreateRoomModalBtn').addEventListener('click', () => {
                     if(GlobalState.user.isGuest) return alert("방 개설 기능은 정식 회원가입 후 이용 가능합니다.");
                     document.getElementById('createRoomForm').classList.toggle('hidden');
@@ -601,14 +642,12 @@
 
                 document.getElementById('clearBtn').addEventListener('click', () => { WorkspaceSyncEngine.saveUndoState(); WorkspaceSyncEngine.clearCanvasLocal(); if (GlobalState.roomChannel) GlobalState.roomChannel.send({ type: 'broadcast', event: 'clear', payload: { sender: GlobalState.user.nickname }}); });
                 
-                // 실행 취소 / 다시 실행 리스너 연동
                 document.getElementById('undoBtn').addEventListener('click', WorkspaceSyncEngine.handleUndo); 
                 document.getElementById('redoBtn').addEventListener('click', WorkspaceSyncEngine.handleRedo); 
                 
                 document.getElementById('toggleGridBtn').addEventListener('click', WorkspaceSyncEngine.toggleGrid); 
                 document.getElementById('saveBtn').addEventListener('click', WorkspaceSyncEngine.handleCloudAndLocalSave);
 
-                // 게스트 채팅 전송 차단
                 document.getElementById('chatSendBtn').addEventListener('click', () => {
                     if (GlobalState.user.isGuest) return alert("게스트는 채팅을 사용할 수 없습니다. 구경하고 그리기만 가능합니다.");
                     WorkspaceSyncEngine.sendChatPacket();
@@ -653,7 +692,7 @@
 
             toggleGrid: (e) => {
                 WorkspaceSyncEngine.gridEnabled = !WorkspaceSyncEngine.gridEnabled;
-                const wrapper = document.getElementById('canvasWrapper'); // 모눈종이 버그 래퍼 타겟 적용
+                const wrapper = document.getElementById('canvasWrapper'); 
                 if (WorkspaceSyncEngine.gridEnabled) {
                     wrapper.style.backgroundImage = 'linear-gradient(var(--color-border) 1px, transparent 1px), linear-gradient(90deg, var(--color-border) 1px, transparent 1px)';
                     wrapper.style.backgroundSize = '20px 20px';
@@ -666,7 +705,7 @@
 
             saveUndoState: () => {
                 WorkspaceSyncEngine.undoStack.push(WorkspaceSyncEngine.canvas.toDataURL());
-                WorkspaceSyncEngine.redoStack = []; // 새 작업 시 redo 스택 초기화
+                WorkspaceSyncEngine.redoStack = []; 
                 if (WorkspaceSyncEngine.undoStack.length > 15) WorkspaceSyncEngine.undoStack.shift();
             },
 
@@ -861,7 +900,6 @@
             
             handleCloudAndLocalSave: async () => {
                 if (GlobalState.user.isGuest) {
-                    // 게스트는 다운로드만 허용
                     const a = document.createElement('a'); a.download = `export_${GlobalState.currentRoom.name}.png`; a.href = WorkspaceSyncEngine.canvas.toDataURL('image/png'); a.click();
                     return alert("게스트는 로컬 기기 다운로드만 지원됩니다.");
                 }
@@ -884,8 +922,11 @@
         };
 
         window.onload = () => { 
-            AuthController.bindEvents(); SystemConfigController.bindAdminEvents(); 
-            RoomController.bindEvents(); CommunityController.bindEvents();
+            AuthController.bindEvents(); 
+            ProfileController.bindEvents(); 
+            SystemConfigController.bindAdminEvents(); 
+            RoomController.bindEvents(); 
+            CommunityController.bindEvents();
             WorkspaceSyncEngine.initCanvasEngine(); 
         };
     </script>
