@@ -11,107 +11,111 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { 
-            --bg-base: #fefce8; 
-            --bg-surface: #ffffff; 
-            --color-primary: #facc15; 
-            --color-primary-hover: #eab308; 
-            --color-text-main: #0f172a; 
-            --color-text-muted: #64748b; 
-            --color-border: #fef08a; 
-            --color-danger: #ef4444; 
-            --color-secondary: #fef9c3; 
+            --bg-base: #fefce8; --bg-surface: #ffffff; --color-primary: #facc15; --color-primary-hover: #eab308; 
+            --color-text-main: #0f172a; --color-text-muted: #64748b; --color-border: #fef08a; --color-danger: #ef4444; --color-secondary: #fef9c3; 
+        }
+
+        body.dark-mode {
+            --bg-base: #0f172a; --bg-surface: #1e293b; --color-primary: #3b82f6; --color-primary-hover: #2563eb;
+            --color-text-main: #f8fafc; --color-text-muted: #94a3b8; --color-border: #334155; --color-secondary: #334155;
         }
 
         body.summer-theme {
-            --bg-base: #f0fdfa;
-            --color-primary: #06b6d4;
-            --color-primary-hover: #0891b2;
-            --color-border: #a5f3fc;
-            --color-secondary: #cffafe;
+            --bg-base: #f0fdfa; --color-primary: #06b6d4; --color-primary-hover: #0891b2; --color-border: #a5f3fc; --color-secondary: #cffafe;
             background-image: url('data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M0 50 C 25 25, 75 75, 100 50 L 100 100 L 0 100 Z" fill="%23e0f2fe" opacity="0.3"/></svg>');
             background-size: cover;
         }
 
-        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background-color: var(--bg-base); color: var(--color-text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: background-color 0.5s ease; }
-        input, textarea, select { width: 100%; padding: 12px; margin-bottom: 14px; border: 2px solid var(--color-border); border-radius: 8px; box-sizing: border-box; font-size: 14px; outline: none; transition: 0.2s; }
+        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background-color: var(--bg-base); color: var(--color-text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: background-color 0.5s ease, color 0.3s; }
+        input, textarea, select { width: 100%; padding: 12px; margin-bottom: 14px; border: 2px solid var(--color-border); border-radius: 8px; box-sizing: border-box; font-size: 14px; outline: none; transition: 0.2s; background: var(--bg-surface); color: var(--color-text-main); }
         input:focus, textarea:focus, select:focus { border-color: var(--color-primary); }
         button { padding: 10px 18px; border: none; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
         
-        .btn-primary { background-color: var(--color-primary); color: var(--color-text-main); width: 100%; } .btn-primary:hover { background-color: var(--color-primary-hover); transform: translateY(-1px); }
+        .btn-primary { background-color: var(--color-primary); color: #0f172a; width: 100%; } .btn-primary:hover { filter: brightness(0.9); transform: translateY(-1px); }
         .btn-danger { background-color: var(--color-danger); color: white; } .btn-danger:hover { background-color: #dc2626; }
         .btn-secondary { background-color: var(--color-secondary); color: var(--color-text-main); border: 1px solid var(--color-border); }
-        .btn-secondary:hover { filter: brightness(0.95); } 
         .btn-icon { padding: 8px 12px; background: transparent; color: var(--color-text-muted); font-size: 16px; box-shadow: none; border: 1px solid transparent; }
         .btn-icon:hover { background: var(--color-secondary); color: var(--color-text-main); border-color: var(--color-border); }
-        .btn-icon.active { background: var(--color-text-main); color: white; }
+        .btn-icon.active { background: var(--color-text-main); color: var(--bg-surface); }
         .hidden { display: none !important; }
         
-        #authOverlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(8px); display: flex; justify-content: center; align-items: center; z-index: 9999; }
-        .auth-card { background: var(--bg-surface); padding: 40px; border-radius: 16px; width: 340px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); border-top: 6px solid var(--color-primary); transition: border-color 0.3s; }
-        .auth-card h2 { margin: 0 0 24px 0; font-size: 24px; font-weight: 800; text-align: center; } .auth-toggle { font-size: 13px; color: var(--color-text-muted); cursor: pointer; text-align: center; margin-top: 14px; font-weight: 600; } .auth-toggle:hover { color: var(--color-text-main); text-decoration: underline; }
+        #authOverlay, .admin-modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(8px); display: flex; justify-content: center; align-items: center; z-index: 9999; }
+        .auth-card, .admin-modal-card { background: var(--bg-surface); padding: 40px; border-radius: 16px; width: 340px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); border-top: 6px solid var(--color-primary); transition: background 0.3s, border-color 0.3s; color: var(--color-text-main); display: flex; flex-direction: column; max-height: 90vh; }
+        .auth-card h2, .admin-modal-card h2 { margin: 0 0 24px 0; font-size: 24px; font-weight: 800; text-align: center; color: var(--color-text-main); } 
+        .auth-toggle { font-size: 13px; color: var(--color-text-muted); cursor: pointer; text-align: center; margin-top: 14px; font-weight: 600; } 
         
         #lobbyScreen { display: none; flex-direction: column; padding: 0; flex: 1; overflow-y: auto; }
-        .lobby-nav { background: var(--bg-surface); padding: 16px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--color-border); position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); } 
+        .lobby-nav { background: var(--bg-surface); padding: 16px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--color-border); position: sticky; top: 0; z-index: 100; } 
         .lobby-nav h1 { margin: 0; font-size: 24px; font-weight: 800; color: var(--color-text-main); }
         .nav-actions { display: flex; gap: 12px; align-items: center; } 
-        .user-badge { background: var(--color-secondary); color: var(--color-text-main); padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 700; border: 1px solid var(--color-border); display: flex; align-items: center; gap: 6px; cursor: pointer; transition: 0.2s; } 
-        .user-badge:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .user-badge { background: var(--color-secondary); color: var(--color-text-main); padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 700; border: 1px solid var(--color-border); display: flex; align-items: center; gap: 6px; cursor: pointer; } 
         .admin-badge { background: var(--color-danger); color: white; padding: 2px 6px; border-radius: 8px; font-size: 11px; }
-        #adminPanelBtn { display: none; background: #0f172a; color: white; width: auto; padding: 10px 24px; white-space: nowrap !important; flex-shrink: 0; }
         
         .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 30px; padding: 40px; max-width: 1500px; margin: 0 auto; width: 100%; box-sizing: border-box; }
         .section-title { font-size: 20px; font-weight: 800; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--color-border); padding-bottom: 10px; }
-        
-        .lobby-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; } 
-        .lobby-tab-btn { background: transparent; color: #64748b; border-radius: 8px; padding: 10px 20px; font-size: 15px; font-weight: 600; transition: 0.2s; display: flex; align-items: center; gap: 8px; } 
-        .lobby-tab-btn.active { background: var(--color-text-main); color: white; }
-        
-        .room-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; margin-bottom: 40px; } .room-card { background: var(--bg-surface); padding: 20px; border-radius: 16px; border: 2px solid var(--color-border); transition: 0.3s; display: flex; flex-direction: column; justify-content: space-between; min-height: 130px; } .room-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-color: var(--color-primary); } .room-card .title { font-size: 18px; font-weight: 800; margin-bottom: 4px; } .room-card .creator-info { font-size: 12px; color: var(--color-text-muted); margin-bottom: 12px; }
-        .side-panel { display: flex; flex-direction: column; gap: 20px; } .info-box { background: var(--bg-surface); padding: 24px; border-radius: 16px; border: 2px solid var(--color-border); } .info-box h3 { margin: 0 0 16px 0; font-size: 16px; font-weight: 800; border-bottom: 2px solid var(--color-border); padding-bottom: 12px; } .info-list { margin: 0; padding-left: 20px; font-size: 14px; color: var(--color-text-main); line-height: 1.6; white-space: pre-line; }
+        .lobby-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid var(--color-border); padding-bottom: 10px; } 
+        .lobby-tab-btn { background: transparent; color: var(--color-text-muted); border-radius: 8px; padding: 10px 20px; font-size: 15px; font-weight: 600; } .lobby-tab-btn.active { background: var(--color-text-main); color: var(--bg-surface); }
+        .room-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; margin-bottom: 40px; } .room-card { background: var(--bg-surface); padding: 20px; border-radius: 16px; border: 2px solid var(--color-border); display: flex; flex-direction: column; justify-content: space-between; min-height: 130px; } 
+        .side-panel { display: flex; flex-direction: column; gap: 20px; } .info-box { background: var(--bg-surface); padding: 24px; border-radius: 16px; border: 2px solid var(--color-border); } 
         .best-artwork-box { width: 100%; height: 180px; background: #f8fafc; border-radius: 12px; display: flex; justify-content: center; align-items: center; overflow: hidden; border: 2px solid var(--color-primary); position: relative; } .best-artwork-box img { width: 100%; height: 100%; object-fit: cover; }
         .event-banner { background: linear-gradient(135deg, #0ea5e9, #2dd4bf); color: white; padding: 20px; border-radius: 16px; margin-bottom: 20px; font-weight: bold; text-align: center; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); display: none; }
         
+        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid var(--color-border); border-radius: 6px; font-size: 13px; background: var(--bg-surface); margin-bottom: 8px; color: var(--color-text-main); }
+        
         #mainWorkspace { display: none; flex-direction: column; height: 100vh; position: relative; }
         
-        #toolbar { padding: 10px 24px; background: var(--bg-surface); border-bottom: 2px solid var(--color-border); display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; box-shadow: 0 2px 10px rgba(0,0,0,0.05); z-index: 10; } 
-        .tool-group { display: flex; align-items: center; gap: 4px; background: #f8fafc; padding: 6px; border-radius: 10px; border: 1px solid #e2e8f0; }
-        .tool-divider { width: 1px; height: 24px; background: #cbd5e1; margin: 0 4px; }
+        #toolbar { padding: 10px 24px; background: var(--bg-surface); border-bottom: 2px solid var(--color-border); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; z-index: 20; } 
+        .tool-group { display: flex; align-items: center; gap: 4px; background: var(--bg-base); padding: 6px; border-radius: 10px; border: 1px solid var(--color-border); white-space: nowrap; }
+        .tool-divider { width: 1px; height: 24px; background: var(--color-border); margin: 0 4px; }
         
         #workspaceContent { display: flex; flex: 1; overflow: hidden; background: var(--bg-base); position: relative; } 
         .canvas-container { flex: 1; display: flex; justify-content: center; align-items: center; padding: 24px; overflow: auto; } 
-        .canvas-wrapper { position: relative; display: inline-block; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-radius: 8px; border: 2px solid var(--color-border); background: #ffffff; line-height: 0; }
+        .canvas-wrapper { position: relative; display: inline-block; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-radius: 8px; border: 2px solid var(--color-border); background: #ffffff; line-height: 0; transition: background 0.3s; }
         canvas { display: block; border-radius: 6px; cursor: crosshair; touch-action: none; background: transparent; }
         
         .chat-container { width: 320px; background: var(--bg-surface); border-left: 2px solid var(--color-border); display: flex; flex-direction: column; z-index: 10; transition: transform 0.3s ease; } 
         .chat-header { padding: 14px 18px; border-bottom: 2px solid var(--color-border); font-weight: 800; background: var(--color-secondary); display:flex; justify-content:space-between; align-items:center; } 
         
-        /* 접속자 리스트 스타일 */
-        .online-users-panel { padding: 8px 12px; background: #f8fafc; border-bottom: 2px solid #e2e8f0; display: flex; flex-wrap: wrap; gap: 6px; font-size: 11px; max-height: 80px; overflow-y: auto; }
-        .user-chip { background: var(--color-primary); color: #0f172a; padding: 3px 8px; border-radius: 12px; font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .online-users-panel { padding: 8px 12px; background: var(--bg-base); border-bottom: 2px solid var(--color-border); display: flex; flex-wrap: wrap; gap: 6px; font-size: 11px; max-height: 80px; overflow-y: auto; }
+        .user-chip { background: var(--color-primary); color: #0f172a; padding: 4px 8px; border-radius: 12px; font-weight: 700; cursor: default; transition: 0.2s; }
+        .user-chip.kickable:hover { background: var(--color-danger); color: white; cursor: pointer; }
+        .user-chip.kickable:hover::after { content: " (강퇴)"; }
         
         .chat-messages { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; } 
-        .chat-msg { font-size: 13px; line-height: 1.5; padding: 8px 12px; background: #f8fafc; border-radius: 8px; border: 1px solid var(--color-border); position: relative; word-break: break-all; } 
-        .chat-msg.system { background: #fffbeb; border-color: #fde68a; color: #b45309; font-weight: bold; text-align: center; }
+        .chat-msg { font-size: 13px; line-height: 1.5; padding: 8px 12px; background: var(--bg-base); border-radius: 8px; border: 1px solid var(--color-border); word-break: break-all; } 
+        .chat-msg.system { background: transparent; border: none; color: var(--color-text-muted); font-weight: bold; text-align: center; }
         .chat-msg b { font-weight: 800; color: #b45309; } 
-        .chat-input-area { display: flex; padding: 16px; border-top: 2px solid var(--color-border); } 
+        .chat-input-area { display: flex; padding: 16px; border-top: 2px solid var(--color-border); background: var(--bg-surface); } 
         .chat-input-area input { margin: 0; border-radius: 8px 0 0 8px; border-right: none; } 
         .chat-input-area button { border-radius: 0 8px 8px 0; width: auto; }
-        
-        .admin-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 10000; backdrop-filter: blur(4px); } 
-        .admin-modal-card { background: white; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); display: flex; flex-direction: column; } 
-        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; background: white; margin-bottom: 8px; }
         
         .floating-reaction { position: absolute; font-size: 40px; pointer-events: none; animation: floatUpFade 2.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; z-index: 50; user-select: none; } 
         @keyframes floatUpFade { 0% { opacity: 1; transform: translateY(0) scale(0.5); } 20% { transform: translateY(-15px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(1); } }
         
+        .ping-ripple { position: absolute; border: 3px solid var(--color-danger); border-radius: 50%; transform: translate(-50%, -50%); animation: rippleAnim 1s ease-out forwards; pointer-events: none; z-index: 105; box-shadow: 0 0 10px rgba(239,68,68,0.5); }
+        .ping-label { position: absolute; transform: translate(-50%, -150%); background: var(--color-danger); color: white; padding: 3px 8px; font-size: 11px; font-weight: bold; border-radius: 12px; z-index: 106; pointer-events: none; animation: fadeOut 1.5s ease-out forwards; }
+        @keyframes rippleAnim { 0% { width: 0; height: 0; opacity: 1; } 100% { width: 120px; height: 120px; opacity: 0; } } 
+        @keyframes fadeOut { 0% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; } }
+
         .live-cursor, .live-cursor * { pointer-events: none !important; user-select: none !important; touch-action: none !important; }
         .live-cursor { position: absolute; z-index: 100; left: 0; top: 0; will-change: transform; display: block; } 
         .cursor-pointer-svg { width: 18px; height: 18px; fill: #ef4444; filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.3)); position: absolute; left: 0; top: 0; } 
-        .cursor-label { background: #ef4444; color: white; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 12px; position: absolute; top: 14px; left: 12px; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2); line-height: normal; }
-        
-        .reaction-btn { background: transparent; border: none; font-size: 20px; display: flex; justify-content: center; align-items: center; cursor: pointer; padding: 4px; transition: 0.2s; border-radius: 8px; } 
-        .reaction-btn:hover { transform: scale(1.2); background: var(--color-secondary); } 
+        .cursor-label { background: #ef4444; color: white; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 12px; position: absolute; top: 14px; left: 12px; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .laser-pointer-dot { position: absolute; width: 24px; height: 24px; background: rgba(239, 68, 68, 0.6); border-radius: 50%; border: 2px solid red; transform: translate(-50%, -50%); pointer-events: none; z-index: 99; box-shadow: 0 0 10px rgba(239, 68, 68, 0.8); }
+
+        .reaction-btn { background: transparent; border: none; font-size: 20px; cursor: pointer; padding: 4px; border-radius: 8px; } 
+        .reaction-btn:hover { background: var(--color-border); } 
         .summer-only { display: none; }
+        #chatToggleBtn { display: none; }
+
+        @media (max-width: 800px) {
+            #toolbar { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 8px; gap: 6px; }
+            .dashboard-grid { grid-template-columns: 1fr; padding: 20px; }
+            .lobby-nav { padding: 12px 20px; }
+            .chat-container { position: absolute; right: 0; top: 0; bottom: 0; width: 100%; max-width: 320px; transform: translateX(100%); box-shadow: -4px 0 15px rgba(0,0,0,0.2); }
+            .chat-container.open { transform: translateX(0); }
+            #chatToggleBtn { display: inline-flex; margin-left: auto; background: var(--color-primary); color: #0f172a; border-radius: 20px; padding: 6px 12px; font-weight: bold; }
+        }
     </style>
 </head>
 <body>
@@ -124,15 +128,10 @@
                 <input type="email" id="loginEmail" placeholder="이메일 주소">
                 <input type="password" id="loginPw" placeholder="비밀번호">
                 <button class="btn-primary" id="doLoginBtn"><i class="fas fa-sign-in-alt"></i> 로그인</button>
-                
                 <div style="margin: 16px 0; display: flex; align-items: center; text-align: center; color: var(--color-text-muted);">
-                    <hr style="flex:1; border:0; border-top:1px solid var(--color-border);">
-                    <span style="padding: 0 10px; font-size: 12px; font-weight: bold;">또는</span>
-                    <hr style="flex:1; border:0; border-top:1px solid var(--color-border);">
+                    <hr style="flex:1; border:0; border-top:1px solid var(--color-border);"><span style="padding: 0 10px; font-size: 12px; font-weight: bold;">또는</span><hr style="flex:1; border:0; border-top:1px solid var(--color-border);">
                 </div>
-                
-                <button class="btn-secondary" id="doGuestLoginBtn" style="width:100%; border-color:#94a3b8; color:#475569;"><i class="fas fa-eye"></i> 게스트로 둘러보기</button>
-                
+                <button class="btn-secondary" id="doGuestLoginBtn" style="width:100%;"><i class="fas fa-eye"></i> 게스트로 둘러보기 (그리기 전용)</button>
                 <div class="auth-toggle" id="doResetPwBtn" style="margin-top: 18px;">비밀번호를 잊으셨나요?</div>
                 <div class="auth-toggle" id="showSignupBtn">계정이 없으신가요? 회원가입</div>
             </div>
@@ -152,11 +151,11 @@
         </div>
     </div>
 
-    <!-- 2. 프로필 모달 (작품 불러오기) -->
+    <!-- 2. 프로필 모달 (작품 불러오기 유지) -->
     <div id="profileModal" class="admin-modal hidden">
-        <div class="admin-modal-card" style="width: 600px; padding: 24px;">
-            <h2 style="margin-top:0; color:#0f172a; border-bottom:2px solid var(--color-border); padding-bottom:10px;"><i class="fas fa-user-circle"></i> 내 프로필</h2>
-            <div style="margin-bottom: 24px; font-size: 14px; background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <div class="admin-modal-card" style="width: 600px; padding: 24px; max-height: 85vh; overflow-y: auto;">
+            <h2 style="margin-top:0; border-bottom:2px solid var(--color-border); padding-bottom:10px;"><i class="fas fa-user-circle"></i> 내 프로필</h2>
+            <div style="margin-bottom: 24px; font-size: 14px; background: var(--bg-base); padding: 16px; border-radius: 8px; border: 1px solid var(--color-border);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                     <span style="color:var(--color-text-muted);">현재 닉네임</span>
                     <div style="display: flex; align-items: center; gap: 8px;">
@@ -172,24 +171,84 @@
             <h3 style="font-size: 16px; margin: 0 0 12px 0;"><i class="fas fa-images"></i> 내 그림 보관함 (클릭하여 불러오기)</h3>
             <div id="modalMyArtworks" class="room-grid" style="grid-template-columns: repeat(3, 1fr); max-height: 350px; overflow-y: auto; gap: 12px; margin-bottom: 0;"></div>
             
-            <div style="display: flex; gap: 10px; margin-top: 24px;">
+            <div style="display: flex; gap: 10px; margin-top: 24px; flex-shrink: 0;">
                 <button class="btn-danger" style="flex: 1;" onclick="location.reload()"><i class="fas fa-sign-out-alt"></i> 로그아웃</button>
                 <button class="btn-secondary" id="closeProfileModalBtn" style="flex: 2;">닫기</button>
             </div>
         </div>
     </div>
 
-    <!-- 기타 모달 템플릿들 -->
-    <div id="noticeModal" class="admin-modal hidden"><div class="admin-modal-card" style="width:450px; padding:24px; border-top:6px solid var(--color-primary);"><h2 style="margin-top:0;"><i class="fas fa-bullhorn"></i> 공지사항</h2><div id="popupNoticeContent" style="background:#f8fafc; padding:16px; border-radius:8px; font-size:14px; line-height:1.6; white-space:pre-line; margin-bottom:20px;"></div><button class="btn-primary" id="closeNoticeModalBtn">확인했습니다</button></div></div>
+    <!-- 3. 각종 정보 및 글쓰기 모달 -->
+    <div id="noticeModal" class="admin-modal hidden"><div class="admin-modal-card" style="width:450px; padding:24px; border-top:6px solid var(--color-primary);"><h2 style="margin-top:0;"><i class="fas fa-bullhorn"></i> 공지사항</h2><div id="popupNoticeContent" style="background:var(--bg-base); padding:16px; border-radius:8px; font-size:14px; line-height:1.6; white-space:pre-line; margin-bottom:20px;"></div><button class="btn-primary" id="closeNoticeModalBtn">확인했습니다</button></div></div>
     <div id="editConfigModal" class="admin-modal hidden"><div class="admin-modal-card" style="width:500px; padding:24px; border-top:6px solid var(--color-danger);"><h2 id="editConfigTitle" style="margin-top:0;">내용 수정</h2><textarea id="editConfigContent" rows="10" style="font-family:inherit; resize:vertical; padding:12px; font-size:14px; line-height:1.5; margin-bottom:15px; border:2px solid var(--color-border); border-radius:8px; outline:none;"></textarea><div style="display:flex; gap:10px;"><button class="btn-primary" id="saveConfigBtn">저장하기</button><button class="btn-secondary" id="closeConfigModalBtn">취소</button></div></div></div>
-    <div id="postModal" class="admin-modal hidden"><div class="admin-modal-card" style="width:500px; padding:24px;"><h2 style="margin-top:0;"><i class="fas fa-pen-nib"></i> 글쓰기</h2><select id="postCategory"><option value="feedback">피드백 (오류/건의)</option><option value="idea">아이디어 공유</option><option value="free">자유게시판</option></select><input type="text" id="postTitle" placeholder="제목을 입력하세요"><textarea id="postContent" rows="6" placeholder="내용을 상세하게 입력하세요" style="font-family:inherit; resize:none;"></textarea><div style="display:flex; gap:10px;"><button class="btn-primary" id="submitPostBtn">등록하기</button><button class="btn-secondary" id="closePostModalBtn">취소</button></div></div></div>
-    <div id="viewPostModal" class="admin-modal hidden"><div class="admin-modal-card" style="width:600px; padding:24px; max-height:90vh;"><div style="flex-shrink:0;"><span id="viewPostCategory" style="background:var(--color-secondary); padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold;"></span><h2 id="viewPostTitle" style="margin:10px 0 4px 0;"></h2><div id="viewPostMeta" style="font-size:12px; color:var(--color-text-muted); margin-bottom:15px;"></div><div id="viewPostContent" style="background:#f8fafc; padding:20px; border-radius:8px; font-size:14px; line-height:1.6; min-height:80px; white-space:pre-line; margin-bottom:20px; border:1px solid #e2e8f0;"></div></div><div style="flex:1; overflow-y:auto; border-top:2px solid var(--color-border); margin-top:10px; padding-top:10px;"><h3 style="font-size:15px; margin-top:0;"><i class="fas fa-comments"></i> 댓글</h3><div id="commentList" style="margin-bottom:15px; min-height:50px;"></div></div><div style="display:flex; gap:8px; flex-shrink:0; margin-top:10px;"><input type="text" id="newCommentInput" placeholder="댓글을 남겨보세요..." style="margin:0;"><button class="btn-primary" id="submitCommentBtn" style="width:auto; white-space:nowrap;">작성</button></div><button class="btn-secondary" id="closeViewPostModalBtn" style="width:100%; margin-top:15px; flex-shrink:0;">닫기</button></div></div>
+    
+    <div id="postModal" class="admin-modal hidden">
+        <div class="admin-modal-card" style="width:500px; padding:24px;">
+            <h2 style="margin-top:0;"><i class="fas fa-pen-nib"></i> 커뮤니티 글쓰기</h2>
+            <select id="postCategory"><option value="feedback">피드백 (오류/건의)</option><option value="idea">아이디어 공유</option><option value="free">자유게시판</option></select>
+            <input type="text" id="postTitle" placeholder="제목을 입력하세요">
+            <textarea id="postContent" rows="6" placeholder="내용을 상세하게 입력하세요" style="font-family:inherit; resize:none;"></textarea>
+            <div style="display:flex; gap:10px;"><button class="btn-primary" id="submitPostBtn">등록하기</button><button class="btn-secondary" id="closePostModalBtn">취소</button></div>
+        </div>
+    </div>
+    
+    <div id="viewPostModal" class="admin-modal hidden">
+        <div class="admin-modal-card" style="width:600px; padding:24px; max-height:90vh;">
+            <div style="flex-shrink:0;">
+                <span id="viewPostCategory" style="background:var(--color-secondary); padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold;"></span>
+                <h2 id="viewPostTitle" style="margin:10px 0 4px 0;"></h2>
+                <div id="viewPostMeta" style="font-size:12px; color:var(--color-text-muted); margin-bottom:15px;"></div>
+                <div id="viewPostContent" style="background:var(--bg-base); padding:20px; border-radius:8px; font-size:14px; line-height:1.6; min-height:80px; white-space:pre-line; margin-bottom:20px; border:1px solid var(--color-border);"></div>
+            </div>
+            <div style="flex:1; overflow-y:auto; border-top:2px solid var(--color-border); margin-top:10px; padding-top:10px;">
+                <h3 style="font-size:15px; margin-top:0;"><i class="fas fa-comments"></i> 댓글</h3>
+                <div id="commentList" style="margin-bottom:15px; min-height:50px;"></div>
+            </div>
+            <div style="display:flex; gap:8px; flex-shrink:0; margin-top:10px;">
+                <input type="text" id="newCommentInput" placeholder="댓글을 남겨보세요..." style="margin:0;">
+                <button class="btn-primary" id="submitCommentBtn" style="width:auto; white-space:nowrap;">작성</button>
+            </div>
+            <button class="btn-secondary" id="closeViewPostModalBtn" style="width:100%; margin-top:15px; flex-shrink:0;">닫기</button>
+        </div>
+    </div>
 
-    <!-- 3. 로비 화면 -->
+    <!-- 4. 통합 어드민 제어판 (보안 로직 100% 적용) -->
+    <div id="adminModal" class="admin-modal hidden">
+        <div class="admin-modal-card" style="width: 90vw; max-width: 1400px; height: 90vh; padding: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h2 style="margin:0;"><i class="fas fa-sliders-h"></i> 통합 관리자 제어판</h2>
+                <button id="toggleSummerEventBtn" class="btn-primary" style="width:auto; background:#0ea5e9;"><i class="fas fa-water"></i> 글로벌 썸머 이벤트 켜기/끄기</button>
+            </div>
+            <hr style="border:0; border-top:1px solid var(--color-border); margin-bottom:15px; flex-shrink: 0;">
+            <div style="display: flex; gap: 20px; flex: 1; overflow: hidden;">
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 20px; min-width: 300px; overflow: hidden;">
+                    <!-- 유저 관리 (실시간 정지 연동) -->
+                    <div style="flex: 1; display: flex; flex-direction: column; background: var(--bg-base); border: 1px solid var(--color-border); border-radius: 8px; padding: 12px; overflow: hidden;">
+                        <h3 style="margin:0 0 10px 0; font-size:15px; border-bottom:1px solid var(--color-border); padding-bottom:8px;">👤 유저 관리 (실시간 정지 연동)</h3>
+                        <div id="adminUserList" style="flex:1; overflow-y:auto; padding-right: 4px;"></div>
+                    </div>
+                    <!-- 신고 내역 -->
+                    <div style="flex: 1; display: flex; flex-direction: column; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; padding: 12px; overflow: hidden;">
+                        <h3 style="margin:0 0 10px 0; font-size:15px; color:var(--color-danger); border-bottom:1px solid rgba(239,68,68,0.3); padding-bottom:8px;">🚨 워크스페이스 직접 신고 내역</h3>
+                        <div id="adminReportList" style="flex:1; overflow-y:auto; padding-right: 4px;"></div>
+                    </div>
+                </div>
+                <!-- 서버 그림 보관함 -->
+                <div style="flex: 2; display: flex; flex-direction: column; background: var(--bg-base); border: 1px solid var(--color-border); border-radius: 8px; padding: 12px; overflow: hidden;">
+                    <h3 style="margin:0 0 10px 0; font-size:15px; border-bottom:1px solid var(--color-border); padding-bottom:8px;">🖼️ 서버 그림 보관함 (우수작 채택 / 숨김)</h3>
+                    <div id="adminArtworkList" style="flex:1; overflow-y:auto; display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; align-content: start; padding-right: 4px;"></div>
+                </div>
+            </div>
+            <button class="btn-secondary" id="closeAdminModalBtn" style="width:100%; padding:14px; margin-top:15px; flex-shrink:0;">제어판 닫기</button>
+        </div>
+    </div>
+
+    <!-- 5. 로비 화면 -->
     <div id="lobbyScreen">
         <div class="lobby-nav">
             <h1><i class="fas fa-palette"></i> Live Workspace</h1>
             <div class="nav-actions">
+                <button class="btn-icon" id="toggleDarkModeLobby" title="다크 모드 설정"><i class="fas fa-moon"></i></button>
                 <div class="user-badge" id="userGreetingMsg" title="내 프로필 및 그림 보기">연결 중</div>
                 <button id="adminPanelBtn" class="btn-danger"><i class="fas fa-cog"></i> 관리자</button>
                 <button class="btn-secondary" id="btnQuickJoin"><i class="fas fa-random"></i> 빠른 입장</button>
@@ -199,127 +258,139 @@
 
         <div class="dashboard-grid">
             <div class="main-panel">
-                <div class="event-banner" id="summerEventBanner">
-                    🌊 여름 특별 이벤트가 진행 중입니다! 썸머 테마와 특별 브러시, 리액션을 사용해보세요! 🏄‍♂️
-                </div>
-
+                <div class="event-banner" id="summerEventBanner">🌊 여름 특별 이벤트가 진행 중입니다! 시원한 썸머 테마와 특별 브러시를 사용해보세요! 🏄‍♂️</div>
+                
                 <div class="lobby-tabs">
                     <button id="tabRoomsBtn" class="lobby-tab-btn active"><i class="fas fa-th-large"></i> 프로젝트 세션</button>
                     <button id="tabCommunityBtn" class="lobby-tab-btn"><i class="fas fa-users"></i> 커뮤니티 광장</button>
                 </div>
-
+                
                 <div id="roomsTabSection">
-                    <div class="section-title">진행 중인 프로젝트 세션 <button class="btn-secondary" style="padding: 6px 12px; font-size: 13px;" id="btnRefreshRooms"><i class="fas fa-sync-alt"></i> 새로고침</button></div>
+                    <div class="section-title">진행 중인 프로젝트 세션 <button class="btn-secondary" id="btnRefreshRooms" style="padding:6px 12px; font-size:13px;"><i class="fas fa-sync-alt"></i> 새로고침</button></div>
                     <div id="createRoomForm" class="hidden" style="background: var(--bg-surface); padding: 24px; border-radius: 16px; border: 2px solid var(--color-border); margin-bottom: 24px;">
-                        <h3>방 개설하기</h3><input type="text" id="newRoomName" placeholder="방 제목을 입력하세요"><input type="password" id="newRoomPw" placeholder="비밀번호 (선택)"><div style="display: flex; gap: 10px;"><button class="btn-primary" id="createRoomBtn">개설 및 입장</button><button class="btn-secondary" id="cancelCreateBtn">취소</button></div>
+                        <h3>방 개설하기</h3><input type="text" id="newRoomName" placeholder="방 제목"><input type="password" id="newRoomPw" placeholder="비밀번호 (선택)"><div style="display: flex; gap: 10px;"><button class="btn-primary" id="createRoomBtn">개설 및 입장</button><button class="btn-secondary" id="cancelCreateBtn">취소</button></div>
                     </div>
                     <div id="roomListContainer" class="room-grid"></div>
                 </div>
 
                 <div id="communityTabSection" class="hidden">
-                    <div class="section-title">커뮤니티 게시판<div style="display:flex; gap:8px;"><select id="communityCategoryFilter" style="margin:0; padding:6px 12px; width:auto; background:white; font-size:13px;"><option value="all">전체 보기</option><option value="feedback">피드백</option><option value="idea">아이디어</option><option value="free">자유</option></select><button class="btn-primary" id="btnOpenWriteModal" style="width:auto; padding:6px 14px; font-size:13px;">글쓰기</button></div></div>
-                    <div id="communityPostList" class="list-container" style="max-height: 600px; padding:10px; border:none; background:white;"></div>
+                    <div class="section-title">커뮤니티 게시판
+                        <div style="display:flex; gap:8px;">
+                            <select id="communityCategoryFilter" style="margin:0; padding:6px 12px; width:auto; font-size:13px;">
+                                <option value="all">전체 보기</option><option value="feedback">피드백</option><option value="idea">아이디어</option><option value="free">자유</option>
+                            </select>
+                            <button class="btn-primary" id="btnOpenWriteModal" style="width:auto; padding:6px 14px; font-size:13px;">글쓰기</button>
+                        </div>
+                    </div>
+                    <div id="communityPostList" style="max-height: 600px; padding:10px; border:none; background:transparent;"></div>
                 </div>
             </div>
-
+            
             <div class="side-panel">
-                <div class="info-box" style="border-color: var(--color-primary); background: var(--bg-base);"><h3 style="color: #b45309;"><i class="fas fa-crown"></i> 이주의 우수 채택작</h3><div class="best-artwork-box" id="featuredArtworkContainer"><span style="color:var(--color-text-muted); font-size:13px;">채택된 작품이 없습니다</span></div><p style="font-size: 12px; text-align: center; color: var(--color-text-muted); margin: 8px 0 0 0;" id="featuredMeta"></p></div>
-                <div class="info-box"><h3><i class="fas fa-info-circle"></i> 공지사항 <button id="editNoticeBtn" class="btn-secondary hidden" style="float:right; padding:2px 8px; font-size:11px;">편집</button></h3><div class="info-list" id="noticeContent">로딩 중...</div></div>
-                <div class="info-box"><h3><i class="fas fa-book"></i> 사용법 가이드 <button id="editGuideBtn" class="btn-secondary hidden" style="float:right; padding:2px 8px; font-size:11px;">편집</button></h3><div class="info-list" id="guideContent">로딩 중...</div></div>
+                <div class="info-box" style="border-color: var(--color-primary); background: var(--bg-base);">
+                    <h3 style="color: #b45309;"><i class="fas fa-crown"></i> 이주의 우수 채택작</h3>
+                    <div class="best-artwork-box" id="featuredArtworkContainer"><span style="color:var(--color-text-muted); font-size:13px;">채택된 작품이 없습니다</span></div>
+                    <p style="font-size: 12px; text-align: center; color: var(--color-text-muted); margin: 8px 0 0 0;" id="featuredMeta"></p>
+                </div>
+                <div class="info-box">
+                    <h3><i class="fas fa-info-circle"></i> 공지사항 <button id="editNoticeBtn" class="btn-secondary hidden" style="float:right; padding:2px 8px; font-size:11px;">편집</button></h3>
+                    <div class="info-list" id="noticeContent">로딩 중...</div>
+                </div>
+                <div class="info-box">
+                    <h3><i class="fas fa-book"></i> 사용법 가이드 <button id="editGuideBtn" class="btn-secondary hidden" style="float:right; padding:2px 8px; font-size:11px;">편집</button></h3>
+                    <div class="info-list" id="guideContent">로딩 중...</div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- 4. 관리자 제어판 -->
-    <div id="adminModal" class="admin-modal hidden">
-        <div class="admin-modal-card" style="width: 90vw; max-width: 1400px; height: 90vh; padding: 24px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h2 style="margin:0; color:#0f172a;"><i class="fas fa-sliders-h"></i> 통합 관리자 제어판</h2>
-                <button id="toggleSummerEventBtn" class="btn-primary" style="width:auto; background:#0ea5e9;"><i class="fas fa-water"></i> 썸머 이벤트 켜기</button>
-            </div>
-            <hr style="border:0; border-top:1px solid #e2e8f0; margin-bottom:15px; flex-shrink: 0;">
-            <div style="display: flex; gap: 20px; flex: 1; overflow: hidden;">
-                <div style="flex: 1; display: flex; flex-direction: column; gap: 20px; min-width: 300px; overflow: hidden;">
-                    <div style="flex: 1; display: flex; flex-direction: column; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; overflow: hidden;">
-                        <h3 style="margin:0 0 10px 0; font-size:15px; border-bottom:1px solid #cbd5e1; padding-bottom:8px;">👤 유저 관리</h3>
-                        <div id="adminUserList" style="flex:1; overflow-y:auto; padding-right: 4px;"></div>
-                    </div>
-                    <div style="flex: 1; display: flex; flex-direction: column; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; overflow: hidden;">
-                        <h3 style="margin:0 0 10px 0; font-size:15px; color:#b91c1c; border-bottom:1px solid #fca5a5; padding-bottom:8px;">🚨 신고 내역</h3>
-                        <div id="adminReportList" style="flex:1; overflow-y:auto; padding-right: 4px;"></div>
-                    </div>
-                </div>
-                <div style="flex: 2; display: flex; flex-direction: column; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; overflow: hidden;">
-                    <h3 style="margin:0 0 10px 0; font-size:15px; border-bottom:1px solid #cbd5e1; padding-bottom:8px;">🖼️ 서버 그림 보관함</h3>
-                    <div id="adminArtworkList" style="flex:1; overflow-y:auto; display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; align-content: start; padding-right: 4px;"></div>
-                </div>
-            </div>
-            <button class="btn-secondary" id="closeAdminModalBtn" style="width:100%; padding:14px; background:#f1f5f9; margin-top:15px; flex-shrink:0;">제어판 닫기</button>
-        </div>
-    </div>
-
-    <!-- 5. 메인 워크스페이스 (그리기 툴) -->
+    <!-- 6. 메인 워크스페이스 -->
     <div id="mainWorkspace">
-        <!-- 툴바 -->
         <div id="toolbar">
             <div class="tool-group">
                 <button id="exitBtn" class="btn-secondary" title="나가기"><i class="fas fa-arrow-left"></i></button>
-                <div class="tool-divider"></div>
-                <span style="font-weight: 800; font-size: 15px; color: #b45309; margin:0 8px;" id="roomInfoDisplay">Room</span>
+                <span style="font-weight: 800; font-size: 14px; margin:0 8px;" id="roomInfoDisplay">Room</span>
                 <button id="togglePrivacyBtn" class="btn-secondary" style="font-size: 12px; padding: 4px 8px;">공개</button>
             </div>
             
             <div class="tool-group">
                 <button id="drawModeBtn" class="btn-icon active" title="펜 모드"><i class="fas fa-pen"></i></button>
+                <button id="shapeModeBtn" class="btn-icon" title="도형 모드 (사각형/원형)"><i class="fas fa-shapes"></i></button>
                 <button id="eraserBtn" class="btn-icon" title="지우개"><i class="fas fa-eraser"></i></button>
-                <button id="textModeBtn" class="btn-icon" title="텍스트"><i class="fas fa-font"></i></button>
+                <button id="bucketBtn" class="btn-icon" title="배경색 채우기"><i class="fas fa-fill-drip"></i></button>
+                <button id="textModeBtn" class="btn-icon" title="일반 텍스트"><i class="fas fa-font"></i></button>
+                <button id="postitModeBtn" class="btn-icon" title="포스트잇 메모 붙이기"><i class="fas fa-sticky-note"></i></button>
+                <button id="pingModeBtn" class="btn-icon" title="어텐션 핑 (위치 강조)"><i class="fas fa-map-marker-alt"></i></button>
+                <button id="eyedropperBtn" class="btn-icon" title="스포이드 (색상 추출)"><i class="fas fa-eye-dropper"></i></button>
+                <button id="symmetryBtn" class="btn-icon" title="좌우 대칭(데칼코마니) 모드 토글"><i class="fas fa-arrows-alt-h"></i></button>
             </div>
             
-            <!-- 동적 옵션 패널 -->
             <div class="tool-group" id="penOptions">
-                <select id="brushType" style="margin:0; width:auto; padding:6px; border-radius:6px; border:none;">
-                    <option value="solid">일반 펜</option>
+                <select id="brushType" style="margin:0; width:auto; padding:4px; border:none; background:transparent; color:inherit;">
+                    <option value="solid">기본 펜</option>
+                    <option value="circuit">📐 회로도 펜(직각)</option>
                     <option value="highlighter">형광펜</option>
-                    <option value="shadow">네온펜(빛)</option>
-                    <option value="dashed">도트펜</option>
-                    <option value="marker">마커펜</option>
+                    <option value="laser">🔴 레이저 포인터</option>
                     <option value="rainbow">🌈 무지개펜</option>
+                    <!-- NEW: 별 스탬프 브러시 추가 -->
+                    <option value="starBrush">⭐ 별 스탬프 브러시</option>
                     <option value="water" class="summer-only">수채화펜(이벤트)</option>
                 </select>
-                <input type="color" id="colorPicker" value="#0f172a" style="width:30px; height:30px; padding:0; border:none; cursor:pointer; margin:0; border-radius:6px;">
-                <input type="range" id="lineWidth" min="1" max="50" value="3" style="margin:0; width:70px;">
+                <input type="color" id="colorPicker" value="#0f172a" style="width:28px; height:28px; padding:0; border:none; cursor:pointer;">
+                <input type="range" id="lineWidth" min="1" max="50" value="3" style="margin:0; width:60px;">
             </div>
 
-            <div class="tool-group" id="eraserOptions" style="display:none;">
-                <span style="font-size:12px; font-weight:bold;">굵기</span>
-                <input type="range" id="eraserWidth" min="5" max="150" value="30" style="margin:0; width:100px;">
+            <div class="tool-group hidden" id="shapeOptions">
+                <select id="shapeType" style="margin:0; width:auto; padding:4px; border:none; background:transparent; color:inherit;">
+                    <option value="rect">사각형 (Fill)</option>
+                    <option value="rectStroke">사각형 (Stroke)</option>
+                    <option value="circle">원형 (Fill)</option>
+                    <option value="circleStroke">원형 (Stroke)</option>
+                </select>
             </div>
 
-            <div class="tool-group" id="textOptions" style="display:none;">
-                <input type="text" id="textInputStr" placeholder="입력할 글자..." style="margin:0; width:120px; padding:6px; border:none;">
-                <input type="number" id="textSize" value="20" style="width:50px; margin:0; padding:6px; border:none;">
+            <div class="tool-group hidden" id="textOptions">
+                <input type="text" id="textInputStr" placeholder="입력할 글자..." style="margin:0; width:100px; padding:4px; border:none;">
+                <input type="number" id="textSize" value="20" style="width:50px; margin:0; padding:4px; border:none;">
             </div>
             
             <div class="tool-group">
-                <button id="undoBtn" class="btn-icon" title="되돌리기 (Ctrl+Z)"><i class="fas fa-undo"></i></button>
-                <button id="redoBtn" class="btn-icon" title="앞으로 돌리기 (Ctrl+Y)"><i class="fas fa-redo"></i></button>
-                <button id="toggleGridBtn" class="btn-icon" title="모눈종이 토글"><i class="fas fa-border-all"></i></button>
+                <select id="bgTemplate" style="margin:0; width:auto; padding:4px; border:none; background:transparent; cursor:pointer; font-weight:bold; color:var(--color-text-muted);">
+                    <option value="none">배경: 단색</option>
+                    <option value="grid">배경: 모눈종이</option>
+                    <option value="blueprint">배경: 청사진(설계)</option>
+                    <option value="blackboard">배경: 칠판</option>
+                </select>
                 <div class="tool-divider"></div>
+                <!-- NEW: 캔버스 전체 반전 필터 및 전체화면 기능 추가 -->
+                <button id="invertBtn" class="btn-icon" title="색상 반전 필터 적용"><i class="fas fa-adjust"></i></button>
+                <button id="fullscreenBtn" class="btn-icon" title="전체화면 모드"><i class="fas fa-expand"></i></button>
+                <div class="tool-divider"></div>
+                <button id="undoBtn" class="btn-icon" title="되돌리기"><i class="fas fa-undo"></i></button>
+                <button id="redoBtn" class="btn-icon" title="다시 실행"><i class="fas fa-redo"></i></button>
                 <button id="clearBtn" class="btn-icon" title="전체 지우기"><i class="fas fa-trash-alt"></i></button>
             </div>
 
             <div class="tool-group">
+                <!-- NEW: 세션 타이머 패널 -->
+                <span id="timerDisplay" style="font-family: monospace; font-weight: bold; margin: 0 8px; color: var(--color-danger);">00:00</span>
+                <button id="startTimerBtn" class="btn-icon" title="5분 타이머 시작/정지"><i class="fas fa-play"></i></button>
+                <div class="tool-divider"></div>
                 <button class="reaction-btn" onclick="WorkspaceSyncEngine.setToolModeAndEmoji('👍')">👍</button>
-                <button class="reaction-btn" onclick="WorkspaceSyncEngine.setToolModeAndEmoji('❤️')">❤️</button>
-                <button class="reaction-btn" onclick="WorkspaceSyncEngine.setToolModeAndEmoji('😂')">😂</button>
+                <button class="reaction-btn" onclick="WorkspaceSyncEngine.setToolModeAndEmoji('🐟')" title="낚시 스탬프">🐟</button>
+                <button class="reaction-btn" onclick="WorkspaceSyncEngine.setToolModeAndEmoji('🃏')" title="홀덤 스탬프">🃏</button>
+                <button class="reaction-btn" onclick="WorkspaceSyncEngine.setToolModeAndEmoji('🏃‍♂️')" title="러닝 스탬프">🏃‍♂️</button>
                 <button class="reaction-btn summer-only" onclick="WorkspaceSyncEngine.setToolModeAndEmoji('🍉')">🍉</button>
-                <button class="reaction-btn summer-only" onclick="WorkspaceSyncEngine.setToolModeAndEmoji('🌊')">🌊</button>
                 <button class="reaction-btn" onclick="WorkspaceSyncEngine.triggerConfettiLocal()" title="폭죽 터뜨리기!"><i class="fas fa-gift" style="color:#f59e0b;"></i></button>
             </div>
             
             <div class="tool-group" style="margin-left:auto;">
-                <button id="workspaceReportBtn" class="btn-danger" style="padding:6px 12px;" title="신고하기"><i class="fas fa-siren-on"></i> 🚨</button>
-                <button id="saveBtn" class="btn-primary" style="padding:6px 12px;"><i class="fas fa-save"></i> 클라우드 저장</button>
+                <button id="workspaceReportBtn" class="btn-danger" style="padding:6px 12px; margin-right:4px;" title="워크스페이스 내부 신고"><i class="fas fa-siren-on"></i> 🚨 신고</button>
+                <button id="saveBtn" class="btn-primary" style="padding:6px 12px; margin-right:4px;"><i class="fas fa-save"></i> 클라우드 저장</button>
+                <button class="btn-icon" onclick="document.getElementById('imageUploadInput').click();" title="배경 이미지 불러오기"><i class="fas fa-image"></i></button>
+                <input type="file" id="imageUploadInput" accept="image/*" class="hidden">
+                <button id="toggleDarkModeBtn" class="btn-icon"><i class="fas fa-moon"></i></button>
+                <div id="chatToggleBtn"><i class="fas fa-comment-dots"></i> 채팅</div>
             </div>
         </div>
         
@@ -329,19 +400,19 @@
                     <canvas id="drawingBoard" width="1100" height="700" style="background: transparent;"></canvas>
                 </div>
             </div>
-            <div class="chat-container">
-                <!-- 상단 헤더에 현재 인원수 표시 추가 -->
+            <div class="chat-container" id="chatPanel">
                 <div class="chat-header">
-                    <span><i class="fas fa-comments"></i> 실시간 채팅</span>
-                    <span id="onlineUsersCount" style="font-size:11px; background:white; color:#0f172a; padding:3px 8px; border-radius:12px; font-weight:800;">1명 접속 중</span>
+                    <span><i class="fas fa-users"></i> 접속자 (<span id="onlineUsersCount">1</span>명)</span>
+                    <div style="display:flex; gap:4px;">
+                        <!-- NEW: 음성 읽어주기 (TTS) 토글 버튼 -->
+                        <button class="btn-icon" id="ttsToggleBtn" title="채팅 음성으로 듣기"><i class="fas fa-volume-mute"></i></button>
+                        <button class="btn-icon" id="closeChatMobileBtn" style="display:none;"><i class="fas fa-times"></i></button>
+                    </div>
                 </div>
-                <!-- 실시간 접속자 목록 패널 -->
-                <div class="online-users-panel" id="onlineUsersList">
-                    <!-- 유저 칩이 여기에 렌더링 됩니다 -->
-                </div>
+                <div class="online-users-panel" id="onlineUsersList"></div>
                 <div class="chat-messages" id="chatMessages"></div>
                 <div class="chat-input-area">
-                    <input type="text" id="chatInput" placeholder="메시지를 입력하세요...">
+                    <input type="text" id="chatInput" placeholder="메시지 입력...">
                     <button class="btn-primary" id="chatSendBtn"><i class="fas fa-paper-plane"></i></button>
                 </div>
             </div>
@@ -351,41 +422,42 @@
     <script>
         const SUPABASE_URL = 'https://uxaqxpzmmbjsxfrlvbtg.supabase.co'; 
         const SUPABASE_ANON_KEY = 'sb_publishable_rczFp1BPtv9cwgL4aH5jow_PwXZyI0s';
-
         const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        const GlobalState = { user: null, currentRoom: null, roomChannel: null, isAdmin: false, roomParticipants: new Set(), currentPostId: null, currentEditKey: null, isSummerEvent: false };
+        
+        const GlobalState = { 
+            user: null, currentRoom: null, roomChannel: null, globalChannel: null, 
+            isAdmin: false, roomParticipants: new Set(), isSummerEvent: false, isDarkMode: false, ttsEnabled: false 
+        };
+
+        const rgbToHex = (r, g, b) => { return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).padStart(6, '0'); };
+
+        const toggleDarkMode = () => {
+            GlobalState.isDarkMode = !GlobalState.isDarkMode;
+            if(GlobalState.isDarkMode) document.body.classList.add('dark-mode');
+            else document.body.classList.remove('dark-mode');
+        };
 
         const ViewToggle = {
-            switchAuthForm: (targetMode) => {
-                document.getElementById('loginForm').style.display = targetMode === 'login' ? 'block' : 'none';
-                document.getElementById('signupForm').style.display = targetMode === 'signup' ? 'block' : 'none';
-                document.getElementById('updatePwForm').style.display = targetMode === 'updatePw' ? 'block' : 'none';
-            },
-            showScreen: (screenId) => {
-                document.getElementById('authOverlay').style.display = screenId === 'auth' ? 'flex' : 'none';
-                document.getElementById('lobbyScreen').style.display = screenId === 'lobby' ? 'flex' : 'none';
-                document.getElementById('mainWorkspace').style.display = screenId === 'workspace' ? 'flex' : 'none';
-            }
+            switchAuthForm: (t) => { document.getElementById('loginForm').style.display = t === 'login' ? 'block' : 'none'; document.getElementById('signupForm').style.display = t === 'signup' ? 'block' : 'none'; document.getElementById('updatePwForm').style.display = t === 'updatePw' ? 'block' : 'none'; },
+            showScreen: (s) => { document.getElementById('authOverlay').style.display = s === 'auth' ? 'flex' : 'none'; document.getElementById('lobbyScreen').style.display = s === 'lobby' ? 'flex' : 'none'; document.getElementById('mainWorkspace').style.display = s === 'workspace' ? 'flex' : 'none'; }
         };
 
         const AuthController = {
             bindEvents: () => {
                 document.getElementById('showSignupBtn').addEventListener('click', () => ViewToggle.switchAuthForm('signup'));
                 document.getElementById('showLoginBtn').addEventListener('click', () => ViewToggle.switchAuthForm('login'));
-                document.getElementById('doSignupBtn').addEventListener('click', AuthController.handleSignUp);
-                document.getElementById('doLoginBtn').addEventListener('click', AuthController.handleSignIn);
                 document.getElementById('doResetPwBtn').addEventListener('click', AuthController.handleResetPassword);
                 document.getElementById('doUpdatePwBtn').addEventListener('click', AuthController.handleExecuteUpdatePw);
+                document.getElementById('doSignupBtn').addEventListener('click', AuthController.handleSignUp);
+                document.getElementById('doLoginBtn').addEventListener('click', AuthController.handleSignIn);
                 document.getElementById('doGuestLoginBtn').addEventListener('click', AuthController.handleGuestLogin);
             },
             handleGuestLogin: () => {
-                const guestId = Math.floor(Math.random() * 90000) + 10000;
+                const guestId = Math.floor(Math.random() * 9000) + 1000;
                 GlobalState.user = { id: `guest_${guestId}`, email: 'guest@local', nickname: `Guest_${guestId}`, isGuest: true };
                 document.getElementById('userGreetingMsg').innerHTML = `<i class="fas fa-user"></i> ${GlobalState.user.nickname} (게스트)`;
-                ViewToggle.showScreen('lobby');
-                CommunityController.switchTab('rooms');
-                SystemConfigController.loadSettings(false); 
-                SystemConfigController.loadFeaturedArtwork();
+                ViewToggle.showScreen('lobby'); RoomController.loadActiveRooms(); SystemConfigController.initGlobalChannel();
+                SystemConfigController.loadFeaturedArtwork(); CommunityController.loadPosts();
             },
             handleSignUp: async () => {
                 const email = document.getElementById('signupEmail').value.trim(); const password = document.getElementById('signupPw').value.trim(); const nickname = document.getElementById('signupNick').value.trim();
@@ -401,48 +473,36 @@
                 if (error) return alert("로그인 실패: " + error.message);
 
                 const { data: profile } = await client.from('profiles').select('*').eq('email', email).single();
-                if (profile && profile.is_banned) { await client.auth.signOut(); return alert("운영 원칙 위배로 영구 차단된 계정입니다."); }
+                if (profile && profile.is_banned) { await client.auth.signOut(); return alert("영구 차단된 계정입니다."); }
                 
                 const { data: tempBan } = await client.from('system_settings').select('*').eq('key', `ban_${email}`).single();
-                if (tempBan) {
-                    const banDate = new Date(tempBan.value);
-                    if (new Date() < banDate) {
-                        await client.auth.signOut();
-                        return alert(`운영 원칙 위배로 이용이 정지되었습니다.\n정지 해제일: ${banDate.toLocaleString()}`);
-                    } else {
-                        await client.from('system_settings').delete().eq('key', `ban_${email}`);
-                    }
-                }
-
-                if (!profile) await client.from('profiles').insert([{ id: data.user.id, email: data.user.email, nickname: data.user.user_metadata.nickname || '유저' }]);
+                if (tempBan && new Date() < new Date(tempBan.value)) { await client.auth.signOut(); return alert(`이용 정지 상태입니다.\n정지 해제일: ${new Date(tempBan.value).toLocaleString()}`); }
+                if (tempBan && new Date() >= new Date(tempBan.value)) { await client.from('system_settings').delete().eq('key', `ban_${email}`); }
+                
                 GlobalState.user = { id: data.user.id, email: data.user.email, nickname: data.user.user_metadata.nickname || '유저', isGuest: false };
                 
-                if (GlobalState.user.email === 'jinijini5098@naver.com') {
-                    GlobalState.isAdmin = true; document.getElementById('adminPanelBtn').style.display = 'block';
+                // 지정된 이메일에만 철저한 관리자 권한 부여 (PIN 제거, 직관적 연동)
+                if (email === 'jinijini5098@naver.com') { 
+                    GlobalState.isAdmin = true; 
+                    document.getElementById('adminPanelBtn').style.display = 'block';
                     document.getElementById('editNoticeBtn').classList.remove('hidden'); document.getElementById('editGuideBtn').classList.remove('hidden');
-                    document.getElementById('userGreetingMsg').innerHTML = `<span><i class="fas fa-user-shield"></i> ${GlobalState.user.nickname}</span> <span class="admin-badge">Admin</span>`;
-                } else { document.getElementById('userGreetingMsg').innerHTML = `<i class="fas fa-user"></i> ${GlobalState.user.nickname}`; }
-
-                ViewToggle.showScreen('lobby');
-                CommunityController.switchTab('rooms');
-                SystemConfigController.loadSettings(true); 
-                SystemConfigController.loadFeaturedArtwork();
-                CommunityController.loadPosts();
+                } else {
+                    GlobalState.isAdmin = false;
+                }
+                
+                document.getElementById('userGreetingMsg').innerHTML = GlobalState.isAdmin ? `<span><i class="fas fa-user-shield"></i> ${GlobalState.user.nickname}</span>` : `<i class="fas fa-user"></i> ${GlobalState.user.nickname}`;
+                ViewToggle.showScreen('lobby'); RoomController.loadActiveRooms(); SystemConfigController.initGlobalChannel();
+                SystemConfigController.loadFeaturedArtwork(); CommunityController.loadPosts();
             },
             handleResetPassword: async () => {
-                const email = prompt("비밀번호 재설정 링크를 받으실 이메일 주소를 입력해 주세요:");
-                if (!email) return;
+                const email = prompt("비밀번호 재설정 링크를 받을 이메일을 입력하세요:"); if (!email) return;
                 const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname });
-                if (error) return alert("이메일 발송 실패: " + error.message);
-                alert("인증 메일이 발송되었습니다! 메일함에서 링크를 클릭하시면 새 비밀번호 설정 창이 뜹니다.");
+                if (error) return alert("발송 실패: " + error.message); alert("메일 발송 완료!");
             },
             handleExecuteUpdatePw: async () => {
-                const newPw = document.getElementById('newPasswordInput').value.trim();
-                if (newPw.length < 6) return alert("비밀번호는 6자 이상이어야 합니다.");
+                const newPw = document.getElementById('newPasswordInput').value.trim(); if (newPw.length < 6) return alert("6자 이상 입력하세요.");
                 const { error } = await client.auth.updateUser({ password: newPw });
-                if (error) return alert("변경 실패: " + error.message);
-                alert("비밀번호가 성공적으로 변경되었습니다. 새 비밀번호로 로그인해 주세요.");
-                window.location.hash = ""; window.location.reload();
+                if (error) return alert("변경 실패: " + error.message); alert("변경 완료! 로그인해 주세요."); window.location.hash = ""; window.location.reload();
             }
         };
 
@@ -452,45 +512,38 @@
                 document.getElementById('closeProfileModalBtn').addEventListener('click', () => document.getElementById('profileModal').classList.add('hidden'));
                 document.getElementById('editProfileBtn').addEventListener('click', ProfileController.handleEditNickname);
             },
-            
             handleEditNickname: async () => {
-                if (GlobalState.user.isGuest) return alert("게스트는 닉네임을 변경할 수 없습니다.");
-                const newNick = prompt("새로운 닉네임을 입력하세요 (최대 10자):", GlobalState.user.nickname);
-                if (!newNick || newNick.trim() === '' || newNick === GlobalState.user.nickname || newNick.length > 10) return;
-
+                if (GlobalState.user.isGuest) return alert("게스트는 변경 불가합니다.");
+                const newNick = prompt("새 닉네임 (최대 10자):", GlobalState.user.nickname); if (!newNick || newNick.trim() === '' || newNick.length > 10) return;
                 try {
-                    const { error } = await client.from('profiles').update({ nickname: newNick }).eq('id', GlobalState.user.id);
-                    if (error) throw error;
-                    GlobalState.user.nickname = newNick;
-                    document.getElementById('userGreetingMsg').innerHTML = GlobalState.isAdmin ? `<span><i class="fas fa-user-shield"></i> ${newNick}</span> <span class="admin-badge">Admin</span>` : `<i class="fas fa-user"></i> ${newNick}`;
-                    document.getElementById('modalProfileNick').innerText = newNick;
-                    alert("닉네임 변경 완료!");
-                } catch (err) { alert("닉네임 변경 실패: " + err.message); }
+                    const { error } = await client.from('profiles').update({ nickname: newNick }).eq('id', GlobalState.user.id); if (error) throw error;
+                    GlobalState.user.nickname = newNick; document.getElementById('modalProfileNick').innerText = newNick;
+                    document.getElementById('userGreetingMsg').innerHTML = GlobalState.isAdmin ? `<span><i class="fas fa-user-shield"></i> ${newNick}</span>` : `<i class="fas fa-user"></i> ${newNick}`;
+                    alert("변경 완료!");
+                } catch (err) { alert("실패: " + err.message); }
             },
-            
             openProfileModal: async () => {
                 if(!GlobalState.user) return;
                 document.getElementById('modalProfileNick').innerText = GlobalState.user.nickname;
-                document.getElementById('modalProfileStatus').innerHTML = GlobalState.user.isGuest ? '<span style="color:var(--color-text-muted);">게스트 (권한제한)</span>' : '<span style="color:green; font-weight:bold;">정식 회원</span>';
+                document.getElementById('modalProfileStatus').innerHTML = GlobalState.user.isGuest ? '<span style="color:var(--color-text-muted);">게스트</span>' : '<span style="color:green; font-weight:bold;">정식 회원</span>';
                 
-                const container = document.getElementById('modalMyArtworks');
-                container.innerHTML = '<div style="grid-column:1/-1; padding:20px; text-align:center;">로딩 중...</div>';
+                const container = document.getElementById('modalMyArtworks'); container.innerHTML = '<div style="grid-column:1/-1; text-align:center;">로딩 중...</div>';
                 document.getElementById('profileModal').classList.remove('hidden');
 
-                if (GlobalState.user.isGuest) return container.innerHTML = '<div style="grid-column:1/-1; padding:20px; text-align:center; color:#64748b;">게스트는 서버에 저장된 그림이 없습니다.</div>';
+                if (GlobalState.user.isGuest) return container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:var(--color-text-muted);">게스트는 저장된 그림이 없습니다.</div>';
 
                 const { data, error } = await client.from('artworks').select('*').eq('creator', GlobalState.user.nickname).order('created_at', { ascending: false });
-                if (error || !data || data.length === 0) return container.innerHTML = '<div style="grid-column:1/-1; padding:20px; text-align:center; color:#64748b;">저장한 그림이 없습니다.</div>';
+                if (error || !data || data.length === 0) return container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:var(--color-text-muted);">그림 보관함이 비어있습니다.</div>';
 
                 container.innerHTML = '';
                 data.forEach(art => {
                     const div = document.createElement('div');
-                    div.style.cssText = "border: 2px solid var(--color-border); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; background: white;";
+                    div.style.cssText = "border: 2px solid var(--color-border); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; background: var(--bg-surface);";
                     div.innerHTML = `
                         <div style="height: 100px; background: #f8fafc; display: flex; justify-content: center; align-items: center; overflow: hidden; cursor: pointer;" onclick="window.open('${art.image_url}')">
                             <img src="${art.image_url}" style="width: 100%; height: 100%; object-fit: cover; transition: 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
                         </div>
-                        <div style="padding: 8px; font-size: 11px; text-align: center; border-top: 1px solid #e2e8f0;">
+                        <div style="padding: 8px; font-size: 11px; text-align: center; border-top: 1px solid var(--color-border);">
                             <b>${art.room_name}</b><br><span style="color:var(--color-text-muted);">${new Date(art.created_at).toLocaleDateString()}</span>
                         </div>
                         <button class="btn-primary" style="border-radius:0; padding:6px; font-size:12px;" onclick="WorkspaceSyncEngine.loadArtworkToCanvas('${art.image_url}')"><i class="fas fa-file-import"></i> 캔버스로 불러오기</button>
@@ -501,45 +554,39 @@
         };
 
         const SystemConfigController = {
+            initGlobalChannel: () => {
+                SystemConfigController.loadSettings(false);
+                GlobalState.globalChannel = client.channel('global_system_events');
+                GlobalState.globalChannel.on('broadcast', { event: 'system_update' }, async (p) => {
+                    if(p.payload.action === 'summer_toggle') SystemConfigController.applySummerEvent(p.payload.state);
+                    if(p.payload.action === 'ban_user' && !GlobalState.user.isGuest && GlobalState.user.email === p.payload.targetEmail) {
+                        await client.auth.signOut(); alert("⚠️ 관리자에 의해 실시간으로 이용이 정지되어 강제 로그아웃 처리되었습니다."); window.location.reload();
+                    }
+                }).subscribe();
+            },
             loadSettings: async (triggerPopup = false) => {
                 const { data } = await client.from('system_settings').select('*');
                 if (data) {
                     data.forEach(item => {
-                        if (item.key === 'notice') {
-                            document.getElementById('noticeContent').innerText = item.value; document.getElementById('popupNoticeContent').innerText = item.value;
-                            if(triggerPopup) document.getElementById('noticeModal').classList.remove('hidden');
-                        }
+                        if (item.key === 'notice') { document.getElementById('noticeContent').innerText = item.value; document.getElementById('popupNoticeContent').innerText = item.value; if(triggerPopup) document.getElementById('noticeModal').classList.remove('hidden'); }
                         if (item.key === 'guide') document.getElementById('guideContent').innerText = item.value;
-                        if (item.key === 'summer_event') {
-                            SystemConfigController.applySummerEvent(item.value === 'true');
-                        }
+                        if (item.key === 'summer_event') SystemConfigController.applySummerEvent(item.value === 'true');
                     });
                 }
             },
             applySummerEvent: (isActive) => {
                 GlobalState.isSummerEvent = isActive;
-                const body = document.body;
-                const toggleBtn = document.getElementById('toggleSummerEventBtn');
-                
-                if (isActive) {
-                    body.classList.add('summer-theme');
-                    document.getElementById('summerEventBanner').style.display = 'block';
-                    document.querySelectorAll('.summer-only').forEach(el => el.style.display = 'inline-block');
-                    if(toggleBtn) { toggleBtn.innerHTML = '<i class="fas fa-water"></i> 썸머 이벤트 끄기'; toggleBtn.style.background = '#0f172a'; }
-                } else {
-                    body.classList.remove('summer-theme');
-                    document.getElementById('summerEventBanner').style.display = 'none';
-                    document.querySelectorAll('.summer-only').forEach(el => el.style.display = 'none');
-                    if(toggleBtn) { toggleBtn.innerHTML = '<i class="fas fa-water"></i> 썸머 이벤트 켜기'; toggleBtn.style.background = '#0ea5e9'; }
-                    if(document.getElementById('brushType').value === 'water') document.getElementById('brushType').value = 'solid';
-                }
+                if (isActive) { document.body.classList.add('summer-theme'); document.getElementById('summerEventBanner').style.display = 'block'; document.querySelectorAll('.summer-only').forEach(el => el.style.display = 'inline-block'); } 
+                else { document.body.classList.remove('summer-theme'); document.getElementById('summerEventBanner').style.display = 'none'; document.querySelectorAll('.summer-only').forEach(el => el.style.display = 'none'); }
             },
             toggleSummerEventAdmin: async () => {
+                if(!GlobalState.isAdmin) return alert("관리자 권한이 없습니다."); // 백엔드 검증 방어막
                 const newState = !GlobalState.isSummerEvent;
                 await client.from('system_settings').upsert({ key: 'summer_event', value: newState.toString() });
+                GlobalState.globalChannel.send({ type: 'broadcast', event: 'system_update', payload: { action: 'summer_toggle', state: newState } });
                 SystemConfigController.applySummerEvent(newState);
-                alert(`썸머 이벤트가 ${newState ? '켜졌습니다' : '꺼졌습니다'}. (새로고침 시 모든 유저에게 적용됨)`);
             },
+            
             loadFeaturedArtwork: async () => {
                 const { data } = await client.from('artworks').select('*').eq('is_featured', true).order('created_at', { ascending: false });
                 const { data: dropData } = await client.from('system_settings').select('*').eq('key', 'dropped_artworks').single();
@@ -550,34 +597,13 @@
                     document.getElementById('featuredArtworkContainer').innerHTML = `<img src="${validFeatured.image_url}" alt="우수작">`;
                     document.getElementById('featuredMeta').innerText = `방: ${validFeatured.room_name} / 작가: ${validFeatured.creator}`;
                 } else {
-                    document.getElementById('featuredArtworkContainer').innerHTML = `<span style="color:var(--color-text-muted); font-size:13px;">채택된 작품이 없습니다</span>`;
-                    document.getElementById('featuredMeta').innerText = "";
+                    document.getElementById('featuredArtworkContainer').innerHTML = `<span style="color:var(--color-text-muted); font-size:13px;">채택된 작품이 없습니다</span>`; document.getElementById('featuredMeta').innerText = "";
                 }
             },
-            bindAdminEvents: () => {
-                document.getElementById('closeNoticeModalBtn').addEventListener('click', () => document.getElementById('noticeModal').classList.add('hidden'));
-                document.getElementById('editNoticeBtn').addEventListener('click', () => { GlobalState.currentEditKey = 'notice'; document.getElementById('editConfigTitle').innerText = '공지사항 수정'; document.getElementById('editConfigContent').value = document.getElementById('noticeContent').innerText; document.getElementById('editConfigModal').classList.remove('hidden'); });
-                document.getElementById('editGuideBtn').addEventListener('click', () => { GlobalState.currentEditKey = 'guide'; document.getElementById('editConfigTitle').innerText = '사용법 가이드 수정'; document.getElementById('editConfigContent').value = document.getElementById('guideContent').innerText; document.getElementById('editConfigModal').classList.remove('hidden'); });
-                document.getElementById('closeConfigModalBtn').addEventListener('click', () => document.getElementById('editConfigModal').classList.add('hidden'));
-                document.getElementById('saveConfigBtn').addEventListener('click', async () => { const nextValue = document.getElementById('editConfigContent').value; await client.from('system_settings').upsert({ key: GlobalState.currentEditKey, value: nextValue }); SystemConfigController.loadSettings(false); document.getElementById('editConfigModal').classList.add('hidden'); alert("저장되었습니다."); });
-                document.getElementById('adminPanelBtn').addEventListener('click', async () => { document.getElementById('adminModal').classList.remove('hidden'); SystemConfigController.loadAdminUserList(); SystemConfigController.loadAdminReportList(); SystemConfigController.loadAdminArtworkList(); });
-                document.getElementById('closeAdminModalBtn').addEventListener('click', () => document.getElementById('adminModal').classList.add('hidden'));
-                document.getElementById('workspaceReportBtn').addEventListener('click', SystemConfigController.handleDirectReport);
-                document.getElementById('toggleSummerEventBtn').addEventListener('click', SystemConfigController.toggleSummerEventAdmin);
-            },
-            handleDirectReport: async () => {
-                if(GlobalState.user.isGuest) return alert("신고 기능은 정식 회원만 가능합니다.");
-                const targetUser = prompt("신고할 대상의 닉네임을 정확히 입력해주세요:"); 
-                if(!targetUser || targetUser.trim() === '') return;
-                const reason = prompt(`[${targetUser}] 님을 신고하시는 사유를 입력해 주세요:\n(예: 욕설, 부적절한 그림 등)`); 
-                if(!reason || reason.trim() === '') return alert("신고 사유를 입력해야 접수됩니다.");
-                
-                try {
-                    const { error } = await client.from('reports').insert([{ reporter: GlobalState.user.nickname, target_user: targetUser, reason: reason, content: "워크스페이스 내부 직접 신고" }]);
-                    if(error) throw error; alert(`정상적으로 접수되었습니다. 관리자 확인 후 조치됩니다.`);
-                } catch(err) { alert("신고 접수 실패: " + err.message); }
-            },
+            
+            // 어드민 제어판: 유저 관리
             loadAdminUserList: async () => {
+                if(!GlobalState.isAdmin) return;
                 const listContainer = document.getElementById('adminUserList'); const { data: users } = await client.from('profiles').select('*').order('created_at', { ascending: false }); 
                 const { data: tempBans } = await client.from('system_settings').select('*').like('key', 'ban_%');
                 const banMap = {}; if(tempBans) tempBans.forEach(b => { banMap[b.key.replace('ban_', '')] = new Date(b.value); });
@@ -590,47 +616,99 @@
                     if(isPermBanned) statusHtml = '<span style="color:red; font-size:11px; font-weight:bold;">[영구정지]</span>';
                     else if(isTempBanned) statusHtml = `<span style="color:#b45309; font-size:11px; font-weight:bold;">[${tempBanDate.toLocaleDateString()} 까지 정지]</span>`;
 
-                    div.innerHTML = `<div><strong style="${isPermBanned || isTempBanned ? 'color:red; text-decoration:line-through;' : ''}">${user.nickname}</strong> <span style="color:#64748b;">(${user.email})</span> <br>${statusHtml}</div>
-                        <div style="display:flex; gap:4px;">${(isPermBanned || isTempBanned) ? `<button class="btn-secondary" style="padding:4px 8px; font-size:11px; border-color:green; color:green;" onclick="SystemConfigController.unbanUser('${user.id}', '${user.email}')">정지 해제</button>` : `<button class="btn-secondary" style="padding:4px 8px; font-size:11px; border-color:#b45309; color:#b45309;" onclick="SystemConfigController.tempBanUser('${user.email}')">기간 정지</button> <button class="btn-secondary" style="padding:4px 8px; font-size:11px; border-color:red; color:red;" onclick="SystemConfigController.permBanUser('${user.id}')">영구 정지</button>`}</div>`;
+                    div.innerHTML = `<div><strong style="${isPermBanned || isTempBanned ? 'color:red; text-decoration:line-through;' : ''}">${user.nickname}</strong> <span style="color:var(--color-text-muted);">(${user.email})</span> <br>${statusHtml}</div>
+                        <div style="display:flex; gap:4px;">${(isPermBanned || isTempBanned) ? `<button class="btn-secondary" style="padding:4px 8px; font-size:11px; border-color:green; color:green;" onclick="SystemConfigController.unbanUser('${user.id}', '${user.email}')">정지 해제</button>` : `<button class="btn-secondary" style="padding:4px 8px; font-size:11px; border-color:#b45309; color:#b45309;" onclick="SystemConfigController.tempBanUser('${user.email}')">기간 정지</button> <button class="btn-secondary" style="padding:4px 8px; font-size:11px; border-color:red; color:red;" onclick="SystemConfigController.permBanUser('${user.id}', '${user.email}')">영구 정지</button>`}</div>`;
                     listContainer.appendChild(div);
                 });
             },
-            tempBanUser: async (email) => { const days = prompt("며칠 동안 이용을 정지하시겠습니까?\n예: 3, 7, 30"); if (!days || isNaN(days)) return; const banUntil = new Date(); banUntil.setDate(banUntil.getDate() + parseInt(days)); await client.from('system_settings').upsert({ key: `ban_${email}`, value: banUntil.toISOString() }); alert(`${days}일 정지 처리됨.`); SystemConfigController.loadAdminUserList(); },
-            permBanUser: async (userId) => { if(!confirm("이 유저를 영구 차단하시겠습니까?")) return; await client.from('profiles').update({ is_banned: true }).eq('id', userId); SystemConfigController.loadAdminUserList(); },
-            unbanUser: async (userId, email) => { if(!confirm("정지를 해제하시겠습니까?")) return; await client.from('profiles').update({ is_banned: false }).eq('id', userId); await client.from('system_settings').delete().eq('key', `ban_${email}`); SystemConfigController.loadAdminUserList(); },
-            loadAdminReportList: async () => {
-                const listContainer = document.getElementById('adminReportList'); const { data } = await client.from('reports').select('*').order('created_at', { ascending: false }); listContainer.innerHTML = '';
-                if(!data || data.length === 0) return listContainer.innerHTML = '<p style="padding:10px; color:#64748b;">접수된 신고 없음</p>';
-                data.forEach(rep => { const div = document.createElement('div'); div.className = 'list-item'; div.innerHTML = `<div style="line-height:1.4;"><span style="color:red; font-weight:bold;">[대상: ${rep.target_user}]</span> 사유: ${rep.reason}<br><small style="color:#64748b;">신고자: ${rep.reporter}</small></div><button class="btn-danger" style="font-size:11px; padding:4px 8px;" onclick="SystemConfigController.deleteReport('${rep.id}')">종료</button>`; listContainer.appendChild(div); });
+            tempBanUser: async (email) => { 
+                if(!GlobalState.isAdmin) return alert("권한이 없습니다.");
+                const days = prompt("며칠 동안 이용을 정지하시겠습니까?\n예: 3, 7, 30"); if (!days || isNaN(days)) return; 
+                const banUntil = new Date(); banUntil.setDate(banUntil.getDate() + parseInt(days)); 
+                await client.from('system_settings').upsert({ key: `ban_${email}`, value: banUntil.toISOString() }); 
+                GlobalState.globalChannel.send({ type: 'broadcast', event: 'system_update', payload: { action: 'ban_user', targetEmail: email } });
+                alert(`${days}일 정지 처리 및 실시간 동기화 완료.`); SystemConfigController.loadAdminUserList(); 
             },
-            deleteReport: async (id) => { await client.from('reports').delete().eq('id', id); SystemConfigController.loadAdminReportList(); },
+            permBanUser: async (userId, email) => { 
+                if(!GlobalState.isAdmin) return alert("권한이 없습니다.");
+                if(!confirm("이 유저를 영구 차단하시겠습니까?")) return; 
+                await client.from('profiles').update({ is_banned: true }).eq('id', userId); 
+                GlobalState.globalChannel.send({ type: 'broadcast', event: 'system_update', payload: { action: 'ban_user', targetEmail: email } });
+                alert("영구 정지 및 실시간 동기화 완료."); SystemConfigController.loadAdminUserList(); 
+            },
+            unbanUser: async (userId, email) => { 
+                if(!GlobalState.isAdmin) return;
+                if(!confirm("정지를 해제하시겠습니까?")) return; 
+                await client.from('profiles').update({ is_banned: false }).eq('id', userId); await client.from('system_settings').delete().eq('key', `ban_${email}`); 
+                SystemConfigController.loadAdminUserList(); 
+            },
+            
+            // 어드민 제어판: 리포트(신고) 관리
+            loadAdminReportList: async () => {
+                if(!GlobalState.isAdmin) return;
+                const listContainer = document.getElementById('adminReportList'); const { data } = await client.from('reports').select('*').order('created_at', { ascending: false }); listContainer.innerHTML = '';
+                if(!data || data.length === 0) return listContainer.innerHTML = '<p style="padding:10px; color:var(--color-text-muted);">접수된 신고가 없습니다.</p>';
+                data.forEach(rep => { 
+                    const div = document.createElement('div'); div.className = 'list-item'; 
+                    div.innerHTML = `<div style="line-height:1.4;"><span style="color:var(--color-danger); font-weight:bold;">[대상: ${rep.target_user}]</span> 사유: ${rep.reason}<br><small style="color:var(--color-text-muted);">신고자: ${rep.reporter}</small></div>
+                        <button class="btn-danger" style="font-size:11px; padding:4px 8px;" onclick="SystemConfigController.deleteReport('${rep.id}')">종료</button>`; 
+                    listContainer.appendChild(div); 
+                });
+            },
+            deleteReport: async (id) => { if(!GlobalState.isAdmin) return; await client.from('reports').delete().eq('id', id); SystemConfigController.loadAdminReportList(); },
+            
+            handleDirectReport: async () => {
+                if(GlobalState.user.isGuest) return alert("신고 기능은 정식 회원만 가능합니다.");
+                const targetUser = prompt("신고할 대상의 닉네임을 정확히 입력해주세요:"); if(!targetUser || targetUser.trim() === '') return;
+                const reason = prompt(`[${targetUser}] 님을 신고하시는 사유를 입력해 주세요:\n(예: 욕설, 부적절한 그림 등)`); if(!reason || reason.trim() === '') return alert("신고 사유를 입력해야 접수됩니다.");
+                try { const { error } = await client.from('reports').insert([{ reporter: GlobalState.user.nickname, target_user: targetUser, reason: reason, content: "워크스페이스 내부 직접 신고" }]); if(error) throw error; alert(`정상적으로 접수되었습니다. 관리자 확인 후 조치됩니다.`); } catch(err) { alert("신고 접수 실패: " + err.message); }
+            },
+
+            // 어드민 제어판: 서버 그림 보관함
             loadAdminArtworkList: async () => {
+                if(!GlobalState.isAdmin) return;
                 const listContainer = document.getElementById('adminArtworkList'); const { data } = await client.from('artworks').select('*').order('created_at', { ascending: false }); 
                 const { data: dropData } = await client.from('system_settings').select('*').eq('key', 'dropped_artworks').single();
                 const droppedIds = dropData && dropData.value ? JSON.parse(dropData.value) : [];
                 listContainer.innerHTML = ''; if (!data || data.length === 0) return listContainer.innerHTML = '<p style="padding:10px;">저장된 작품이 없습니다.</p>';
                 const visibleArtworks = data.filter(art => !droppedIds.includes(art.id)); if (visibleArtworks.length === 0) return listContainer.innerHTML = '<p style="padding:10px;">표시할 작품이 없습니다.</p>';
                 visibleArtworks.forEach(art => {
-                    const div = document.createElement('div'); div.style.cssText = "background:white; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; display:flex; flex-direction:column;";
-                    div.innerHTML = `<div style="height:140px; background:#e2e8f0; cursor:pointer;" onclick="window.open('${art.image_url}')"><img src="${art.image_url}" style="width:100%; height:100%; object-fit:cover;"></div><div style="padding:8px; font-size:11px; line-height:1.4;"><b>${art.room_name}</b><br><span style="color:#64748b;">저장: ${art.creator}</span><br><span style="color:#94a3b8;">${new Date(art.created_at).toLocaleDateString()}</span></div><div style="display:flex; gap:4px; padding:8px; border-top:1px solid #e2e8f0; background:#f8fafc;">${art.is_featured ? '<span style="color:green; font-weight:700; flex:1; text-align:center; font-size:12px;">★ 메인 채택됨</span>' : `<button class="btn-secondary" style="flex:1; font-size:11px; padding:6px;" onclick="SystemConfigController.adoptArtwork('${art.id}')">메인 전시</button>`}<button class="btn-danger" style="flex:1; font-size:11px; padding:6px;" onclick="SystemConfigController.dropArtwork('${art.id}')">탈락(숨김)</button></div>`; listContainer.appendChild(div);
+                    const div = document.createElement('div'); div.style.cssText = "background:var(--bg-surface); border:1px solid var(--color-border); border-radius:8px; overflow:hidden; display:flex; flex-direction:column;";
+                    div.innerHTML = `<div style="height:140px; background:var(--bg-base); cursor:pointer;" onclick="window.open('${art.image_url}')"><img src="${art.image_url}" style="width:100%; height:100%; object-fit:cover;"></div><div style="padding:8px; font-size:11px; line-height:1.4;"><b>${art.room_name}</b><br><span style="color:var(--color-text-muted);">저장: ${art.creator}</span><br><span style="color:var(--color-text-muted);">${new Date(art.created_at).toLocaleDateString()}</span></div><div style="display:flex; gap:4px; padding:8px; border-top:1px solid var(--color-border); background:var(--bg-base);">${art.is_featured ? '<span style="color:green; font-weight:700; flex:1; text-align:center; font-size:12px;">★ 메인 채택됨</span>' : `<button class="btn-secondary" style="flex:1; font-size:11px; padding:6px;" onclick="SystemConfigController.adoptArtwork('${art.id}')">메인 전시</button>`}<button class="btn-danger" style="flex:1; font-size:11px; padding:6px;" onclick="SystemConfigController.dropArtwork('${art.id}')">탈락(숨김)</button></div>`; listContainer.appendChild(div);
                 });
             },
             dropArtwork: async (id) => {
+                if(!GlobalState.isAdmin) return;
                 if(!confirm("이 작품을 숨김 처리하시겠습니까?")) return;
                 try { const { data: dropData } = await client.from('system_settings').select('*').eq('key', 'dropped_artworks').single(); let droppedIds = []; if (dropData && dropData.value) { try { droppedIds = JSON.parse(dropData.value); } catch(e){} } if (!droppedIds.includes(id)) droppedIds.push(id); await client.from('system_settings').upsert({ key: 'dropped_artworks', value: JSON.stringify(droppedIds) }); alert("숨김 처리되었습니다."); SystemConfigController.loadAdminArtworkList(); SystemConfigController.loadFeaturedArtwork(); } catch(err) { alert("실패: " + err.message); }
             },
-            adoptArtwork: async (id) => { await client.from('artworks').update({ is_featured: false }).eq('is_featured', true); await client.from('artworks').update({ is_featured: true }).eq('id', id); alert("우수작품으로 채택되었습니다."); SystemConfigController.loadAdminArtworkList(); SystemConfigController.loadFeaturedArtwork(); }
+            adoptArtwork: async (id) => { if(!GlobalState.isAdmin) return; await client.from('artworks').update({ is_featured: false }).eq('is_featured', true); await client.from('artworks').update({ is_featured: true }).eq('id', id); alert("우수작품으로 채택되었습니다."); SystemConfigController.loadAdminArtworkList(); SystemConfigController.loadFeaturedArtwork(); },
+
+            bindAdminEvents: () => {
+                document.getElementById('closeNoticeModalBtn').addEventListener('click', () => document.getElementById('noticeModal').classList.add('hidden'));
+                document.getElementById('editNoticeBtn').addEventListener('click', () => { if(!GlobalState.isAdmin) return; GlobalState.currentEditKey = 'notice'; document.getElementById('editConfigTitle').innerText = '공지사항 수정'; document.getElementById('editConfigContent').value = document.getElementById('noticeContent').innerText; document.getElementById('editConfigModal').classList.remove('hidden'); });
+                document.getElementById('editGuideBtn').addEventListener('click', () => { if(!GlobalState.isAdmin) return; GlobalState.currentEditKey = 'guide'; document.getElementById('editConfigTitle').innerText = '사용법 가이드 수정'; document.getElementById('editConfigContent').value = document.getElementById('guideContent').innerText; document.getElementById('editConfigModal').classList.remove('hidden'); });
+                document.getElementById('closeConfigModalBtn').addEventListener('click', () => document.getElementById('editConfigModal').classList.add('hidden'));
+                document.getElementById('saveConfigBtn').addEventListener('click', async () => { if(!GlobalState.isAdmin) return; const nextValue = document.getElementById('editConfigContent').value; await client.from('system_settings').upsert({ key: GlobalState.currentEditKey, value: nextValue }); SystemConfigController.loadSettings(false); document.getElementById('editConfigModal').classList.add('hidden'); alert("저장되었습니다."); });
+                document.getElementById('toggleSummerEventBtn').addEventListener('click', SystemConfigController.toggleSummerEventAdmin);
+            }
         };
 
         const CommunityController = {
             bindEvents: () => {
-                document.getElementById('tabRoomsBtn').addEventListener('click', () => CommunityController.switchTab('rooms')); document.getElementById('tabCommunityBtn').addEventListener('click', () => CommunityController.switchTab('community'));
+                document.getElementById('tabRoomsBtn').addEventListener('click', () => CommunityController.switchTab('rooms')); 
+                document.getElementById('tabCommunityBtn').addEventListener('click', () => CommunityController.switchTab('community'));
                 document.getElementById('btnOpenWriteModal').addEventListener('click', () => { if (GlobalState.user.isGuest) return alert("커뮤니티 글쓰기는 정식 회원만 가능합니다."); document.getElementById('postModal').classList.remove('hidden'); });
-                document.getElementById('closePostModalBtn').addEventListener('click', () => document.getElementById('postModal').classList.add('hidden')); document.getElementById('submitPostBtn').addEventListener('click', CommunityController.handleWritePost); document.getElementById('communityCategoryFilter').addEventListener('change', CommunityController.loadPosts); document.getElementById('closeViewPostModalBtn').addEventListener('click', () => document.getElementById('viewPostModal').classList.add('hidden')); document.getElementById('submitCommentBtn').addEventListener('click', CommunityController.handleAddComment);
+                document.getElementById('closePostModalBtn').addEventListener('click', () => document.getElementById('postModal').classList.add('hidden')); 
+                document.getElementById('submitPostBtn').addEventListener('click', CommunityController.handleWritePost); 
+                document.getElementById('communityCategoryFilter').addEventListener('change', CommunityController.loadPosts); 
+                document.getElementById('closeViewPostModalBtn').addEventListener('click', () => document.getElementById('viewPostModal').classList.add('hidden')); 
+                document.getElementById('submitCommentBtn').addEventListener('click', CommunityController.handleAddComment);
             },
             switchTab: (type) => {
                 document.getElementById('tabRoomsBtn').className = `lobby-tab-btn ${type === 'rooms' ? 'active' : ''}`; document.getElementById('tabCommunityBtn').className = `lobby-tab-btn ${type === 'community' ? 'active' : ''}`;
-                if(type === 'rooms') { document.getElementById('roomsTabSection').classList.remove('hidden'); document.getElementById('communityTabSection').classList.add('hidden'); RoomController.loadActiveRooms(); } else { document.getElementById('roomsTabSection').classList.add('hidden'); document.getElementById('communityTabSection').classList.remove('hidden'); CommunityController.loadPosts(); }
+                if(type === 'rooms') { document.getElementById('roomsTabSection').classList.remove('hidden'); document.getElementById('communityTabSection').classList.add('hidden'); RoomController.loadActiveRooms(); } 
+                else { document.getElementById('roomsTabSection').classList.add('hidden'); document.getElementById('communityTabSection').classList.remove('hidden'); CommunityController.loadPosts(); }
             },
             handleWritePost: async () => {
                 const category = document.getElementById('postCategory').value; const title = document.getElementById('postTitle').value.trim(); const content = document.getElementById('postContent').value.trim();
@@ -638,20 +716,20 @@
                 if(error) return alert("저장 실패: " + error.message); document.getElementById('postTitle').value = ''; document.getElementById('postContent').value = ''; document.getElementById('postModal').classList.add('hidden'); CommunityController.loadPosts();
             },
             loadPosts: async () => {
-                const filter = document.getElementById('communityCategoryFilter').value; const container = document.getElementById('communityPostList'); container.innerHTML = '<p style="padding:15px;">불러오는 중...</p>';
+                const filter = document.getElementById('communityCategoryFilter').value; const container = document.getElementById('communityPostList'); container.innerHTML = '<p style="padding:15px; color:var(--color-text-muted);">불러오는 중...</p>';
                 let query = client.from('community_posts').select('*').order('created_at', { ascending: false }); if(filter !== 'all') query = query.eq('category', filter);
-                const { data } = await query; container.innerHTML = ''; if(!data || data.length === 0) return container.innerHTML = '<p style="padding:20px; color:#64748b; text-align:center;">게시글이 없습니다.</p>';
+                const { data } = await query; container.innerHTML = ''; if(!data || data.length === 0) return container.innerHTML = '<p style="padding:20px; color:var(--color-text-muted); text-align:center;">게시글이 없습니다.</p>';
                 const catMap = { feedback: '피드백', idea: '아이디어', free: '자유' };
-                data.forEach(post => { const div = document.createElement('div'); div.className = 'list-item'; div.style.cursor = 'pointer'; div.onclick = () => CommunityController.viewPostDetail(post, catMap[post.category]); div.innerHTML = `<div><span style="font-weight:bold; color:#b45309;">[${catMap[post.category]}]</span> <strong>${post.title}</strong><br><small style="color:#64748b;">작성자: ${post.author} | ${new Date(post.created_at).toLocaleDateString()}</small></div><span style="color:#cbd5e1;">➔</span>`; container.appendChild(div); });
+                data.forEach(post => { const div = document.createElement('div'); div.className = 'list-item'; div.style.cursor = 'pointer'; div.onclick = () => CommunityController.viewPostDetail(post, catMap[post.category]); div.innerHTML = `<div><span style="font-weight:bold; color:#b45309;">[${catMap[post.category]}]</span> <strong>${post.title}</strong><br><small style="color:var(--color-text-muted);">작성자: ${post.author} | ${new Date(post.created_at).toLocaleDateString()}</small></div><span style="color:var(--color-text-muted);">➔</span>`; container.appendChild(div); });
             },
             viewPostDetail: async (post, catLabel) => {
                 GlobalState.currentPostId = post.id; document.getElementById('viewPostCategory').innerText = catLabel; document.getElementById('viewPostTitle').innerText = post.title; document.getElementById('viewPostMeta').innerText = `작성자: ${post.author} | 작성일: ${new Date(post.created_at).toLocaleString()}`; document.getElementById('viewPostContent').innerText = post.content; await CommunityController.loadComments(post.id); document.getElementById('viewPostModal').classList.remove('hidden');
             },
             loadComments: async (postId) => {
-                const list = document.getElementById('commentList'); list.innerHTML = '<p style="font-size:12px; color:#94a3b8;">로딩 중...</p>';
+                const list = document.getElementById('commentList'); list.innerHTML = '<p style="font-size:12px; color:var(--color-text-muted);">로딩 중...</p>';
                 const { data, error } = await client.from('community_comments').select('*').eq('post_id', postId).order('created_at', { ascending: true });
-                list.innerHTML = ''; if(error || !data || data.length === 0) return list.innerHTML = '<p style="font-size:12px; color:#94a3b8;">작성된 댓글이 없습니다.</p>';
-                data.forEach(comment => { const div = document.createElement('div'); div.className = 'chat-msg'; div.style.marginBottom = '8px'; div.innerHTML = `<b>${comment.author}</b> <span style="color:#64748b; font-size:11px;">${new Date(comment.created_at).toLocaleString()}</span><div style="margin-top:4px;">${comment.content}</div>`; list.appendChild(div); });
+                list.innerHTML = ''; if(error || !data || data.length === 0) return list.innerHTML = '<p style="font-size:12px; color:var(--color-text-muted);">작성된 댓글이 없습니다.</p>';
+                data.forEach(comment => { const div = document.createElement('div'); div.className = 'chat-msg'; div.style.marginBottom = '8px'; div.innerHTML = `<b>${comment.author}</b> <span style="color:var(--color-text-muted); font-size:11px;">${new Date(comment.created_at).toLocaleString()}</span><div style="margin-top:4px;">${comment.content}</div>`; list.appendChild(div); });
             },
             handleAddComment: async () => {
                 if(GlobalState.user.isGuest) return alert("댓글 작성은 정식 회원만 가능합니다."); const input = document.getElementById('newCommentInput'); const content = input.value.trim(); if(!content || !GlobalState.currentPostId) return;
@@ -661,24 +739,26 @@
 
         const RoomController = {
             bindEvents: () => {
-                document.getElementById('showCreateRoomModalBtn').addEventListener('click', () => { if(GlobalState.user.isGuest) return alert("방 개설은 정식 회원만 가능합니다."); document.getElementById('createRoomForm').classList.toggle('hidden'); });
-                document.getElementById('cancelCreateBtn').addEventListener('click', () => document.getElementById('createRoomForm').classList.add('hidden')); document.getElementById('createRoomBtn').addEventListener('click', RoomController.handleCreateRoom); document.getElementById('btnRefreshRooms').addEventListener('click', RoomController.loadActiveRooms); document.getElementById('exitBtn').addEventListener('click', RoomController.handleExitRoom); document.getElementById('togglePrivacyBtn').addEventListener('click', RoomController.handleTogglePrivacy);
+                document.getElementById('showCreateRoomModalBtn').addEventListener('click', () => { if(GlobalState.user.isGuest) return alert("정식 회원만 가능합니다."); document.getElementById('createRoomForm').classList.toggle('hidden'); });
+                document.getElementById('cancelCreateBtn').addEventListener('click', () => document.getElementById('createRoomForm').classList.add('hidden')); 
+                document.getElementById('createRoomBtn').addEventListener('click', RoomController.handleCreateRoom); 
+                document.getElementById('btnRefreshRooms').addEventListener('click', RoomController.loadActiveRooms); 
+                document.getElementById('exitBtn').addEventListener('click', RoomController.handleExitRoom);
+                document.getElementById('togglePrivacyBtn').addEventListener('click', RoomController.handleTogglePrivacy);
                 
                 document.getElementById('btnQuickJoin').addEventListener('click', async () => {
                     const { data } = await client.from('rooms').select('*').eq('is_private', false).order('created_at', { ascending: false }).limit(10);
                     if(!data || data.length === 0) return alert("현재 입장 가능한 공개방이 없습니다. 새 방을 만들어보세요!");
-                    const randomRoom = data[Math.floor(Math.random() * data.length)];
-                    RoomController.executeJoinRoom(randomRoom.id, randomRoom.name, false, '', randomRoom.created_by);
+                    const randomRoom = data[Math.floor(Math.random() * data.length)]; RoomController.executeJoinRoom(randomRoom.id, randomRoom.name, false, '', randomRoom.created_by);
                 });
             },
             loadActiveRooms: async () => {
-                const container = document.getElementById('roomListContainer'); container.innerHTML = '<p>로딩 중...</p>';
-                const { data, error } = await client.from('rooms').select('*').order('created_at', { ascending: false }); if (error) return; container.innerHTML = '';
-                if (data.length === 0) return container.innerHTML = '<div style="grid-column: 1/-1; padding: 40px; text-align: center; color: #64748b;">현재 열려있는 방이 없습니다.</div>';
+                const container = document.getElementById('roomListContainer'); const { data } = await client.from('rooms').select('*').order('created_at', { ascending: false }); container.innerHTML = '';
+                if (!data || data.length === 0) return container.innerHTML = '<div style="grid-column: 1/-1; padding: 40px; text-align: center; color: var(--color-text-muted);">현재 열려있는 방이 없습니다.</div>';
                 data.forEach(room => {
                     const div = document.createElement('div'); div.className = 'room-card'; const badge = room.is_private ? `<span style="background:#fee2e2; color:#b91c1c; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:800;">비공개 🔒</span>` : `<span style="background:#dcfce7; color:#166534; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:800;">공개 🟢</span>`;
                     const isOwner = (room.created_by === GlobalState.user.nickname) || GlobalState.isAdmin; const deleteBtnHtml = isOwner ? `<button class="btn-danger" style="margin-top:10px; font-size:12px; padding:6px; width:100%;" onclick="RoomController.deleteRoom('${room.id}')">방 삭제</button>` : '';
-                    div.innerHTML = `<div><div class="meta">${badge}</div><div class="title">${room.name}</div><div class="creator-info">개설자: ${room.created_by || '운영자'}</div></div><div><button class="btn-primary" onclick="RoomController.validateAndJoin('${room.id}', ${room.is_private}, '${room.password}', '${room.name}', '${room.created_by}')">입장하기</button>${deleteBtnHtml}</div>`; container.appendChild(div);
+                    div.innerHTML = `<div><div class="meta">${badge}</div><div class="title" style="margin: 8px 0;">${room.name}</div><div style="font-size:12px; color:var(--color-text-muted); margin-bottom:12px;">방장: ${room.created_by || '운영자'}</div></div><div><button class="btn-primary" onclick="RoomController.validateAndJoin('${room.id}', ${room.is_private}, '${room.password}', '${room.name}', '${room.created_by}')">입장하기</button>${deleteBtnHtml}</div>`; container.appendChild(div);
                 });
             },
             handleCreateRoom: async () => {
@@ -688,18 +768,9 @@
             },
             validateAndJoin: (id, isPrivate, correctPw, name, createdBy) => { if (isPrivate) { const userAccessPw = prompt("비밀번호:"); if (userAccessPw !== correctPw) return alert("틀렸습니다."); } RoomController.executeJoinRoom(id, name, isPrivate, correctPw, createdBy); },
             executeJoinRoom: (id, name, isPrivate, password, createdBy) => {
-                GlobalState.currentRoom = { id, name, isPrivate, password, createdBy }; 
-                GlobalState.roomParticipants.clear(); 
-                
+                GlobalState.currentRoom = { id, name, isPrivate, password, createdBy }; GlobalState.roomParticipants.clear(); 
                 ViewToggle.showScreen('workspace'); document.getElementById('roomInfoDisplay').innerText = `[${name}]`; document.getElementById('togglePrivacyBtn').innerText = isPrivate ? '비공개 🔒' : '공개 🟢'; document.getElementById('chatMessages').innerHTML = '';
-                WorkspaceSyncEngine.connectRealtimePipeline();
-                
-                setTimeout(() => { 
-                    if(GlobalState.roomChannel) {
-                        GlobalState.roomChannel.send({ type: 'broadcast', event: 'user_join', payload: { sender: GlobalState.user.nickname } });
-                        GlobalState.roomChannel.send({ type: 'broadcast', event: 'request_sync', payload: { sender: GlobalState.user.nickname } }); 
-                    }
-                }, 1000);
+                WorkspaceSyncEngine.connectRealtimePipeline(); setTimeout(() => { if(GlobalState.roomChannel) { GlobalState.roomChannel.send({ type: 'broadcast', event: 'user_join', payload: { sender: GlobalState.user.nickname } }); GlobalState.roomChannel.send({ type: 'broadcast', event: 'request_sync', payload: { sender: GlobalState.user.nickname } }); } }, 1000);
             },
             handleTogglePrivacy: async () => {
                 const room = GlobalState.currentRoom; if (!room) return; if (room.createdBy !== GlobalState.user.nickname && !GlobalState.isAdmin) return alert("방장만 바꿀 수 있습니다.");
@@ -708,368 +779,366 @@
                 if(GlobalState.roomChannel) GlobalState.roomChannel.send({ type: 'broadcast', event: 'privacy_change', payload: { isPrivate: updatedPrivate }});
             },
             handleExitRoom: () => {
-                if (GlobalState.roomChannel) { 
-                    GlobalState.roomChannel.send({ type: 'broadcast', event: 'user_leave', payload: { sender: GlobalState.user.nickname } });
-                    client.removeChannel(GlobalState.roomChannel); GlobalState.roomChannel = null; 
-                }
-                GlobalState.currentRoom = null; ViewToggle.showScreen('lobby'); RoomController.loadActiveRooms(); SystemConfigController.loadFeaturedArtwork();
-                document.querySelectorAll('.live-cursor').forEach(el => el.remove()); WorkspaceSyncEngine.undoStack = []; WorkspaceSyncEngine.redoStack = [];
+                if (GlobalState.roomChannel) { GlobalState.roomChannel.send({ type: 'broadcast', event: 'user_leave', payload: { sender: GlobalState.user.nickname } }); client.removeChannel(GlobalState.roomChannel); GlobalState.roomChannel = null; }
+                GlobalState.currentRoom = null; ViewToggle.showScreen('lobby'); RoomController.loadActiveRooms(); SystemConfigController.loadFeaturedArtwork(); WorkspaceSyncEngine.clearCanvasLocal(); document.querySelectorAll('.live-cursor').forEach(el => el.remove()); WorkspaceSyncEngine.undoStack = []; WorkspaceSyncEngine.redoStack = []; WorkspaceSyncEngine.stopTimer();
             },
-            deleteRoom: async (id) => { if(!confirm("이 세션을 삭제하시겠습니까?")) return; await client.from('rooms').delete().eq('id', id); RoomController.loadActiveRooms(); }
+            deleteRoom: async (id) => { if(!confirm("이 세션을 삭제하시겠습니까?")) return; await client.from('rooms').delete().eq('id', id); RoomController.loadActiveRooms(); },
+            kickUser: (nickname) => { if(!confirm(`${nickname} 님을 방에서 강퇴하시겠습니까?`)) return; GlobalState.roomChannel.send({ type: 'broadcast', event: 'kick_user', payload: { target: nickname } }); }
         };
 
         const WorkspaceSyncEngine = {
             canvas: null, ctx: null, isDrawing: false, lastX: 0, lastY: 0, toolMode: 'pen', currentEmoji: '👍', hue: 0,
-            lastDotX: 0, lastDotY: 0, cursorTimeouts: {}, undoStack: [], redoStack: [], gridEnabled: false,
+            cursorTimeouts: {}, undoStack: [], redoStack: [], startX: 0, startY: 0, drawingData: null, isSymmetry: false,
+            timerInterval: null, timeLeft: 0, lastDotX: 0, lastDotY: 0,
 
             initCanvasEngine: () => {
                 WorkspaceSyncEngine.canvas = document.getElementById('drawingBoard'); WorkspaceSyncEngine.ctx = WorkspaceSyncEngine.canvas.getContext('2d');
                 WorkspaceSyncEngine.clearCanvasLocal();
 
                 WorkspaceSyncEngine.canvas.addEventListener('mousedown', WorkspaceSyncEngine.handleMouseDown);
-                window.addEventListener('mouseup', () => WorkspaceSyncEngine.isDrawing = false);
+                window.addEventListener('mouseup', WorkspaceSyncEngine.handleMouseUp);
                 WorkspaceSyncEngine.canvas.addEventListener('mousemove', WorkspaceSyncEngine.processDrawingData);
 
-                const getTouchPos = (e) => {
-                    const rect = WorkspaceSyncEngine.canvas.getBoundingClientRect(); const touch = e.touches[0];
-                    return { offsetX: touch.clientX - rect.left, offsetY: touch.clientY - rect.top };
-                };
+                const getTouchPos = (e) => { const rect = WorkspaceSyncEngine.canvas.getBoundingClientRect(); const touch = e.touches[0]; return { offsetX: touch.clientX - rect.left, offsetY: touch.clientY - rect.top }; };
                 WorkspaceSyncEngine.canvas.addEventListener('touchstart', (e) => { e.preventDefault(); WorkspaceSyncEngine.handleMouseDown(getTouchPos(e)); }, {passive: false});
                 WorkspaceSyncEngine.canvas.addEventListener('touchmove', (e) => { e.preventDefault(); WorkspaceSyncEngine.processDrawingData(getTouchPos(e)); }, {passive: false});
-                WorkspaceSyncEngine.canvas.addEventListener('touchend', (e) => { e.preventDefault(); WorkspaceSyncEngine.isDrawing = false; });
+                WorkspaceSyncEngine.canvas.addEventListener('touchend', (e) => { e.preventDefault(); WorkspaceSyncEngine.handleMouseUp(); });
 
                 document.getElementById('drawModeBtn').addEventListener('click', () => WorkspaceSyncEngine.setToolMode('pen'));
                 document.getElementById('eraserBtn').addEventListener('click', () => WorkspaceSyncEngine.setToolMode('eraser'));
                 document.getElementById('textModeBtn').addEventListener('click', () => WorkspaceSyncEngine.setToolMode('text')); 
+                document.getElementById('shapeModeBtn').addEventListener('click', () => WorkspaceSyncEngine.setToolMode('shape')); 
+                document.getElementById('postitModeBtn').addEventListener('click', () => WorkspaceSyncEngine.setToolMode('postit'));
+                document.getElementById('pingModeBtn').addEventListener('click', () => WorkspaceSyncEngine.setToolMode('ping'));
+                document.getElementById('eyedropperBtn').addEventListener('click', () => WorkspaceSyncEngine.setToolMode('eyedropper'));
+                
+                document.getElementById('symmetryBtn').addEventListener('click', (e) => {
+                    WorkspaceSyncEngine.isSymmetry = !WorkspaceSyncEngine.isSymmetry;
+                    const btn = document.getElementById('symmetryBtn');
+                    if(WorkspaceSyncEngine.isSymmetry) { btn.classList.add('active'); btn.style.background = 'var(--color-text-main)'; btn.style.color = 'var(--bg-surface)'; } 
+                    else { btn.classList.remove('active'); btn.style.background = 'transparent'; btn.style.color = 'var(--color-text-muted)'; }
+                });
+
+                document.getElementById('bucketBtn').addEventListener('click', () => {
+                    WorkspaceSyncEngine.saveUndoState(); const color = document.getElementById('colorPicker').value; WorkspaceSyncEngine.ctx.fillStyle = color; WorkspaceSyncEngine.ctx.fillRect(0,0, WorkspaceSyncEngine.canvas.width, WorkspaceSyncEngine.canvas.height);
+                    if(GlobalState.roomChannel) GlobalState.roomChannel.send({type: 'broadcast', event: 'sync_data_all', payload: {image: WorkspaceSyncEngine.canvas.toDataURL()}});
+                });
+
+                document.getElementById('imageUploadInput').addEventListener('change', (e) => {
+                    const file = e.target.files[0]; if(!file) return; const reader = new FileReader();
+                    reader.onload = (ev) => { const img = new Image(); img.onload = () => { WorkspaceSyncEngine.saveUndoState(); WorkspaceSyncEngine.ctx.drawImage(img, 0, 0, WorkspaceSyncEngine.canvas.width, WorkspaceSyncEngine.canvas.height); if(GlobalState.roomChannel) GlobalState.roomChannel.send({type: 'broadcast', event: 'sync_data_all', payload: {image: WorkspaceSyncEngine.canvas.toDataURL()}}); }; img.src = ev.target.result; }; reader.readAsDataURL(file);
+                });
+
+                document.getElementById('bgTemplate').addEventListener('change', (e) => {
+                    const val = e.target.value; WorkspaceSyncEngine.applyCanvasBackground(val);
+                    if(GlobalState.roomChannel) GlobalState.roomChannel.send({type: 'broadcast', event: 'change_bg', payload: { bg: val }});
+                });
 
                 document.getElementById('clearBtn').addEventListener('click', () => { WorkspaceSyncEngine.saveUndoState(); WorkspaceSyncEngine.clearCanvasLocal(); if (GlobalState.roomChannel) GlobalState.roomChannel.send({ type: 'broadcast', event: 'clear', payload: { sender: GlobalState.user.nickname }}); });
-                
                 document.getElementById('undoBtn').addEventListener('click', WorkspaceSyncEngine.handleUndo); 
                 document.getElementById('redoBtn').addEventListener('click', WorkspaceSyncEngine.handleRedo);
                 
-                document.addEventListener('keydown', (e) => {
-                    if(document.getElementById('mainWorkspace').style.display === 'flex' && e.ctrlKey) {
-                        if(e.key === 'z') { e.preventDefault(); WorkspaceSyncEngine.handleUndo(); }
-                        if(e.key === 'y') { e.preventDefault(); WorkspaceSyncEngine.handleRedo(); }
+                // NEW: 전체화면 모드 버튼 바인딩
+                document.getElementById('fullscreenBtn').addEventListener('click', () => {
+                    const elem = document.getElementById('canvasWrapper');
+                    if (!document.fullscreenElement) { elem.requestFullscreen().catch(err => alert("전체화면을 지원하지 않는 브라우저입니다.")); } 
+                    else { document.exitFullscreen(); }
+                });
+
+                // NEW: 캔버스 전체 반전(Invert) 필터 적용 바인딩
+                document.getElementById('invertBtn').addEventListener('click', () => {
+                    WorkspaceSyncEngine.saveUndoState();
+                    const imgData = WorkspaceSyncEngine.ctx.getImageData(0, 0, WorkspaceSyncEngine.canvas.width, WorkspaceSyncEngine.canvas.height);
+                    for (let i = 0; i < imgData.data.length; i += 4) {
+                        imgData.data[i] = 255 - imgData.data[i];
+                        imgData.data[i+1] = 255 - imgData.data[i+1];
+                        imgData.data[i+2] = 255 - imgData.data[i+2];
+                    }
+                    WorkspaceSyncEngine.ctx.putImageData(imgData, 0, 0);
+                    if(GlobalState.roomChannel) GlobalState.roomChannel.send({type: 'broadcast', event: 'sync_data_all', payload: {image: WorkspaceSyncEngine.canvas.toDataURL()}});
+                });
+
+                // NEW: 세션 타이머 제어 버튼 바인딩
+                document.getElementById('startTimerBtn').addEventListener('click', () => {
+                    if(!GlobalState.isAdmin && GlobalState.currentRoom && GlobalState.currentRoom.createdBy !== GlobalState.user.nickname) return alert("방장만 타이머를 시작할 수 있습니다.");
+                    if(WorkspaceSyncEngine.timerInterval) {
+                        if(GlobalState.roomChannel) GlobalState.roomChannel.send({type: 'broadcast', event: 'timer', payload: {action: 'stop'}});
+                        WorkspaceSyncEngine.stopTimer();
+                    } else {
+                        if(GlobalState.roomChannel) GlobalState.roomChannel.send({type: 'broadcast', event: 'timer', payload: {action: 'start', seconds: 300}});
+                        WorkspaceSyncEngine.startTimer(300); // 5분
                     }
                 });
-                
-                document.getElementById('toggleGridBtn').addEventListener('click', WorkspaceSyncEngine.toggleGrid); 
-                document.getElementById('saveBtn').addEventListener('click', WorkspaceSyncEngine.handleCloudAndLocalSave);
 
-                // 게스트도 채팅 허용 처리
-                document.getElementById('chatSendBtn').addEventListener('click', () => { WorkspaceSyncEngine.sendChatPacket(); });
-                document.getElementById('chatInput').addEventListener('keypress', (e) => { if(e.key === 'Enter') { WorkspaceSyncEngine.sendChatPacket(); } });
+                // NEW: 채팅 TTS 음성 읽어주기 토글 기능
+                document.getElementById('ttsToggleBtn').addEventListener('click', (e) => {
+                    GlobalState.ttsEnabled = !GlobalState.ttsEnabled;
+                    const icon = e.currentTarget;
+                    if(GlobalState.ttsEnabled) { icon.classList.add('active'); icon.innerHTML = '<i class="fas fa-volume-up"></i>'; } 
+                    else { icon.classList.remove('active'); icon.innerHTML = '<i class="fas fa-volume-mute"></i>'; }
+                });
+                
+                document.addEventListener('keydown', (e) => { if(document.getElementById('mainWorkspace').style.display === 'flex' && e.ctrlKey) { if(e.key === 'z') { e.preventDefault(); WorkspaceSyncEngine.handleUndo(); } if(e.key === 'y') { e.preventDefault(); WorkspaceSyncEngine.handleRedo(); } } });
+                document.getElementById('workspaceReportBtn').addEventListener('click', SystemConfigController.handleDirectReport);
+                document.getElementById('saveBtn').addEventListener('click', WorkspaceSyncEngine.handleCloudAndLocalSave);
+                
+                document.getElementById('chatSendBtn').addEventListener('click', WorkspaceSyncEngine.sendChatPacket);
+                document.getElementById('chatInput').addEventListener('keypress', (e) => { if(e.key === 'Enter') WorkspaceSyncEngine.sendChatPacket(); });
+                
+                document.getElementById('chatToggleBtn').addEventListener('click', () => document.getElementById('chatPanel').classList.add('open'));
+                document.getElementById('closeChatMobileBtn').addEventListener('click', () => document.getElementById('chatPanel').classList.remove('open'));
+                if(window.innerWidth <= 800) document.getElementById('closeChatMobileBtn').style.display = 'block';
             },
             
             clearCanvasLocal: () => { WorkspaceSyncEngine.ctx.clearRect(0, 0, WorkspaceSyncEngine.canvas.width, WorkspaceSyncEngine.canvas.height); },
             
+            applyCanvasBackground: (bgType) => {
+                const wrapper = document.getElementById('canvasWrapper'); document.getElementById('bgTemplate').value = bgType;
+                if(bgType === 'grid') { wrapper.style.backgroundImage = 'linear-gradient(#cbd5e1 1px, transparent 1px), linear-gradient(90deg, #cbd5e1 1px, transparent 1px)'; wrapper.style.backgroundSize = '20px 20px'; wrapper.style.backgroundColor = '#ffffff'; }
+                else if(bgType === 'blueprint') { wrapper.style.backgroundImage = 'linear-gradient(rgba(255,255,255,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.2) 1px, transparent 1px)'; wrapper.style.backgroundSize = '30px 30px'; wrapper.style.backgroundColor = '#1e3a8a'; }
+                else if(bgType === 'blackboard') { wrapper.style.backgroundImage = 'none'; wrapper.style.backgroundColor = '#14532d'; }
+                else { wrapper.style.backgroundImage = 'none'; wrapper.style.backgroundColor = '#ffffff'; }
+            },
+
             setToolMode: (mode) => {
                 WorkspaceSyncEngine.toolMode = mode;
-                ['drawModeBtn', 'eraserBtn', 'textModeBtn'].forEach(id => document.getElementById(id).classList.remove('active'));
+                document.querySelectorAll('#toolbar .btn-icon').forEach(el => { if(el.id !== 'symmetryBtn' && el.id !== 'invertBtn' && el.id !== 'fullscreenBtn') el.classList.remove('active'); });
                 
-                let targetBtnId = null;
-                if (mode === 'pen') targetBtnId = 'drawModeBtn';
-                else if (mode === 'eraser') targetBtnId = 'eraserBtn';
-                else if (mode === 'text') targetBtnId = 'textModeBtn';
-                
-                if (targetBtnId) document.getElementById(targetBtnId).classList.add('active');
+                const uiMap = { 'pen': 'drawModeBtn', 'eraser': 'eraserBtn', 'text': 'textModeBtn', 'shape': 'shapeModeBtn', 'postit': 'postitModeBtn', 'ping': 'pingModeBtn', 'eyedropper': 'eyedropperBtn' };
+                if(uiMap[mode]) document.getElementById(uiMap[mode]).classList.add('active');
                 
                 document.getElementById('penOptions').style.display = mode === 'pen' ? 'flex' : 'none';
-                document.getElementById('eraserOptions').style.display = mode === 'eraser' ? 'flex' : 'none';
-                document.getElementById('textOptions').style.display = mode === 'text' ? 'flex' : 'none'; 
-                
-                WorkspaceSyncEngine.canvas.style.cursor = mode === 'eraser' ? 'cell' : (mode === 'stamp' ? 'alias' : (mode === 'text' ? 'text' : 'crosshair'));
+                document.getElementById('shapeOptions').style.display = mode === 'shape' ? 'flex' : 'none';
+                document.getElementById('textOptions').style.display = (mode === 'text' || mode === 'postit') ? 'flex' : 'none'; 
+                WorkspaceSyncEngine.canvas.style.cursor = mode === 'eraser' ? 'cell' : (mode === 'stamp' ? 'alias' : (mode === 'text' || mode === 'postit' ? 'text' : (mode === 'eyedropper' ? 'crosshair' : 'crosshair')));
             },
 
-            setToolModeAndEmoji: (emoji) => { WorkspaceSyncEngine.setToolMode('stamp'); WorkspaceSyncEngine.currentEmoji = emoji; WorkspaceSyncEngine.canvas.style.cursor = 'alias'; },
-
-            toggleGrid: (e) => {
-                WorkspaceSyncEngine.gridEnabled = !WorkspaceSyncEngine.gridEnabled;
-                const wrapper = document.getElementById('canvasWrapper'); 
-                const btn = document.getElementById('toggleGridBtn');
-                if (WorkspaceSyncEngine.gridEnabled) {
-                    wrapper.style.backgroundImage = 'linear-gradient(#cbd5e1 1px, transparent 1px), linear-gradient(90deg, #cbd5e1 1px, transparent 1px)';
-                    wrapper.style.backgroundSize = '20px 20px';
-                    btn.classList.add('active');
-                } else {
-                    wrapper.style.backgroundImage = 'none';
-                    btn.classList.remove('active');
-                }
-            },
-
-            saveUndoState: () => {
-                WorkspaceSyncEngine.undoStack.push(WorkspaceSyncEngine.canvas.toDataURL());
-                WorkspaceSyncEngine.redoStack = []; 
-                if (WorkspaceSyncEngine.undoStack.length > 20) WorkspaceSyncEngine.undoStack.shift();
-            },
-
-            handleUndo: () => {
-                if (WorkspaceSyncEngine.undoStack.length === 0) return;
-                WorkspaceSyncEngine.redoStack.push(WorkspaceSyncEngine.canvas.toDataURL());
-                const lastState = WorkspaceSyncEngine.undoStack.pop();
-                WorkspaceSyncEngine.restoreImageState(lastState);
-            },
+            setToolModeAndEmoji: (emoji) => { WorkspaceSyncEngine.setToolMode('stamp'); WorkspaceSyncEngine.currentEmoji = emoji; },
+            saveUndoState: () => { WorkspaceSyncEngine.undoStack.push(WorkspaceSyncEngine.canvas.toDataURL()); WorkspaceSyncEngine.redoStack = []; if (WorkspaceSyncEngine.undoStack.length > 20) WorkspaceSyncEngine.undoStack.shift(); },
+            handleUndo: () => { if(WorkspaceSyncEngine.undoStack.length===0) return; WorkspaceSyncEngine.redoStack.push(WorkspaceSyncEngine.canvas.toDataURL()); WorkspaceSyncEngine.restoreImageState(WorkspaceSyncEngine.undoStack.pop()); },
+            handleRedo: () => { if(WorkspaceSyncEngine.redoStack.length===0) return; WorkspaceSyncEngine.undoStack.push(WorkspaceSyncEngine.canvas.toDataURL()); WorkspaceSyncEngine.restoreImageState(WorkspaceSyncEngine.redoStack.pop()); },
+            restoreImageState: (dataUrl) => { const img = new Image(); img.onload = () => { WorkspaceSyncEngine.clearCanvasLocal(); WorkspaceSyncEngine.ctx.drawImage(img, 0, 0); if (GlobalState.roomChannel) GlobalState.roomChannel.send({ type: 'broadcast', event: 'sync_data_all', payload: { image: dataUrl } }); }; img.src = dataUrl; },
             
-            handleRedo: () => {
-                if (WorkspaceSyncEngine.redoStack.length === 0) return;
-                WorkspaceSyncEngine.undoStack.push(WorkspaceSyncEngine.canvas.toDataURL());
-                const nextState = WorkspaceSyncEngine.redoStack.pop();
-                WorkspaceSyncEngine.restoreImageState(nextState);
-            },
-            
-            restoreImageState: (dataUrl) => {
-                const img = new Image();
-                img.onload = () => { 
-                    WorkspaceSyncEngine.clearCanvasLocal(); 
-                    WorkspaceSyncEngine.ctx.drawImage(img, 0, 0); 
-                    if (GlobalState.roomChannel) GlobalState.roomChannel.send({ type: 'broadcast', event: 'sync_data_all', payload: { image: dataUrl } });
-                };
-                img.src = dataUrl;
-            },
-
             loadArtworkToCanvas: (url) => {
                 if (!confirm("현재 캔버스 내용 위에 작품을 불러옵니다. 진행하시겠습니까?")) return;
-                const img = new Image();
-                img.crossOrigin = "Anonymous"; 
-                img.onload = () => {
-                    WorkspaceSyncEngine.saveUndoState();
-                    WorkspaceSyncEngine.ctx.drawImage(img, 0, 0, WorkspaceSyncEngine.canvas.width, WorkspaceSyncEngine.canvas.height);
-                    if(GlobalState.roomChannel) GlobalState.roomChannel.send({type: 'broadcast', event: 'sync_data_all', payload: {image: WorkspaceSyncEngine.canvas.toDataURL()}});
-                    document.getElementById('profileModal').classList.add('hidden');
-                };
-                img.src = url;
+                const img = new Image(); img.crossOrigin = "Anonymous"; 
+                img.onload = () => { WorkspaceSyncEngine.saveUndoState(); WorkspaceSyncEngine.ctx.drawImage(img, 0, 0, WorkspaceSyncEngine.canvas.width, WorkspaceSyncEngine.canvas.height); if(GlobalState.roomChannel) GlobalState.roomChannel.send({type: 'broadcast', event: 'sync_data_all', payload: {image: WorkspaceSyncEngine.canvas.toDataURL()}}); document.getElementById('profileModal').classList.add('hidden'); }; img.src = url;
             },
 
-            // 현재 접속 유저 목록 UI 업데이트 함수
+            // NEW: 세션 타이머 관련 함수들
+            startTimer: (sec) => {
+                clearInterval(WorkspaceSyncEngine.timerInterval);
+                WorkspaceSyncEngine.timeLeft = sec;
+                document.getElementById('startTimerBtn').innerHTML = '<i class="fas fa-stop"></i>';
+                WorkspaceSyncEngine.updateTimerUI();
+                WorkspaceSyncEngine.timerInterval = setInterval(() => {
+                    WorkspaceSyncEngine.timeLeft--;
+                    if(WorkspaceSyncEngine.timeLeft <= 0) {
+                        WorkspaceSyncEngine.stopTimer();
+                        WorkspaceSyncEngine.spawnFloatingReaction(WorkspaceSyncEngine.canvas.width/2, WorkspaceSyncEngine.canvas.height/2, '⏰');
+                    } else { WorkspaceSyncEngine.updateTimerUI(); }
+                }, 1000);
+            },
+            stopTimer: () => {
+                clearInterval(WorkspaceSyncEngine.timerInterval);
+                WorkspaceSyncEngine.timerInterval = null;
+                WorkspaceSyncEngine.timeLeft = 0;
+                document.getElementById('startTimerBtn').innerHTML = '<i class="fas fa-play"></i>';
+                document.getElementById('timerDisplay').innerText = '00:00';
+            },
+            updateTimerUI: () => {
+                const m = String(Math.floor(WorkspaceSyncEngine.timeLeft / 60)).padStart(2, '0');
+                const s = String(WorkspaceSyncEngine.timeLeft % 60).padStart(2, '0');
+                document.getElementById('timerDisplay').innerText = `${m}:${s}`;
+            },
+
             updateParticipantsUI: () => {
-                const list = document.getElementById('onlineUsersList');
-                const count = document.getElementById('onlineUsersCount');
-                if(!list || !count) return;
-                
-                const usersArr = Array.from(GlobalState.roomParticipants);
-                count.innerText = usersArr.length + "명 접속 중";
-                list.innerHTML = usersArr.map(p => `<span class="user-chip">${p}</span>`).join('');
+                const list = document.getElementById('onlineUsersList'); document.getElementById('onlineUsersCount').innerText = GlobalState.roomParticipants.size;
+                const isOwner = GlobalState.currentRoom && GlobalState.currentRoom.createdBy === GlobalState.user.nickname;
+                list.innerHTML = Array.from(GlobalState.roomParticipants).map(p => {
+                    const kickAttrs = (isOwner && p !== GlobalState.user.nickname) ? `class="user-chip kickable" onclick="RoomController.kickUser('${p}')" title="클릭하여 강퇴"` : `class="user-chip"`;
+                    return `<span ${kickAttrs}>${p}</span>`;
+                }).join('');
             },
 
             handleMouseDown: (e) => {
-                WorkspaceSyncEngine.isDrawing = true; 
+                if(WorkspaceSyncEngine.toolMode === 'eyedropper') {
+                    const pixel = WorkspaceSyncEngine.ctx.getImageData(e.offsetX, e.offsetY, 1, 1).data;
+                    document.getElementById('colorPicker').value = rgbToHex(pixel[0], pixel[1], pixel[2]); WorkspaceSyncEngine.setToolMode('pen');
+                    return;
+                }
+                if(WorkspaceSyncEngine.toolMode === 'ping') {
+                    WorkspaceSyncEngine.spawnPing(e.offsetX, e.offsetY, GlobalState.user.nickname);
+                    if(GlobalState.roomChannel) GlobalState.roomChannel.send({ type: 'broadcast', event: 'ping', payload: { x: e.offsetX, y: e.offsetY, sender: GlobalState.user.nickname }});
+                    return;
+                }
+
+                WorkspaceSyncEngine.isDrawing = true; WorkspaceSyncEngine.startX = e.offsetX; WorkspaceSyncEngine.startY = e.offsetY; 
                 WorkspaceSyncEngine.lastX = e.offsetX; WorkspaceSyncEngine.lastY = e.offsetY;
-                WorkspaceSyncEngine.lastDotX = e.offsetX; WorkspaceSyncEngine.lastDotY = e.offsetY; 
-                
-                WorkspaceSyncEngine.saveUndoState(); 
-                
+                WorkspaceSyncEngine.lastDotX = e.offsetX; WorkspaceSyncEngine.lastDotY = e.offsetY;
+
+                if(WorkspaceSyncEngine.toolMode === 'shape') { WorkspaceSyncEngine.drawingData = WorkspaceSyncEngine.canvas.toDataURL(); }
+                if(WorkspaceSyncEngine.toolMode !== 'laser') WorkspaceSyncEngine.saveUndoState(); 
+
                 if (WorkspaceSyncEngine.toolMode === 'stamp') {
-                    WorkspaceSyncEngine.placeReactionLocal(e.offsetX, e.offsetY);
-                } else if (WorkspaceSyncEngine.toolMode === 'text') {
-                    const txt = document.getElementById('textInputStr').value.trim();
-                    if(!txt) return alert("텍스트 도구 옵션에서 글자를 먼저 입력해주세요!");
-                    const size = document.getElementById('textSize').value;
-                    const color = document.getElementById('colorPicker').value;
-                    
-                    WorkspaceSyncEngine.executeDrawText(e.offsetX, e.offsetY, txt, color, size);
-                    if(GlobalState.roomChannel) {
-                        GlobalState.roomChannel.send({type: 'broadcast', event: 'text', payload: {x: e.offsetX, y: e.offsetY, text: txt, color, size, sender: GlobalState.user.nickname}});
-                    }
+                    WorkspaceSyncEngine.spawnFloatingReaction(e.offsetX, e.offsetY, WorkspaceSyncEngine.currentEmoji);
+                    if (GlobalState.roomChannel) GlobalState.roomChannel.send({ type: 'broadcast', event: 'reaction', payload: { x: e.offsetX, y: e.offsetY, emoji: WorkspaceSyncEngine.currentEmoji } });
+                } else if (WorkspaceSyncEngine.toolMode === 'text' || WorkspaceSyncEngine.toolMode === 'postit') {
+                    const txt = document.getElementById('textInputStr').value.trim(); if(!txt) return alert("텍스트를 먼저 입력해주세요!");
+                    const size = document.getElementById('textSize').value; const color = document.getElementById('colorPicker').value;
+                    if (WorkspaceSyncEngine.toolMode === 'postit') WorkspaceSyncEngine.executeDrawPostit(e.offsetX, e.offsetY, txt, color);
+                    else WorkspaceSyncEngine.executeDrawText(e.offsetX, e.offsetY, txt, color, size);
+                    if(GlobalState.roomChannel) { GlobalState.roomChannel.send({type: 'broadcast', event: WorkspaceSyncEngine.toolMode, payload: {x: e.offsetX, y: e.offsetY, text: txt, color, size}}); }
                 }
             },
             
-            placeReactionLocal: (x, y) => {
-                WorkspaceSyncEngine.spawnFloatingReaction(x, y, WorkspaceSyncEngine.currentEmoji);
-                if (GlobalState.roomChannel) {
-                    GlobalState.roomChannel.send({ type: 'broadcast', event: 'reaction', payload: { x, y, emoji: WorkspaceSyncEngine.currentEmoji, sender: GlobalState.user.nickname } });
-                }
-            },
-            
-            spawnFloatingReaction: (x, y, emoji) => {
-                const container = document.getElementById('canvasWrapper'); 
-                const el = document.createElement('div'); el.className = 'floating-reaction'; el.innerText = emoji;
-                el.style.left = (x - 20) + 'px'; el.style.top = (y - 20) + 'px'; container.appendChild(el);
-                setTimeout(() => { if (el && el.parentNode) el.remove(); }, 3000);
-            },
-
-            triggerConfettiLocal: () => {
-                WorkspaceSyncEngine.spawnConfetti();
-                if (GlobalState.roomChannel) GlobalState.roomChannel.send({ type: 'broadcast', event: 'confetti', payload: { sender: GlobalState.user.nickname } });
-            },
-
-            spawnConfetti: () => {
-                const colors = GlobalState.isSummerEvent ? ['#0ea5e9', '#38bdf8', '#7dd3fc', '#bae6fd'] : ['#ef4444', '#3b82f6', '#10b981', '#facc15', '#a855f7'];
-                for(let i=0; i<50; i++) {
-                    const el = document.createElement('div'); el.style.position = 'fixed'; el.style.left = Math.random() * 100 + 'vw'; el.style.top = '-20px'; el.style.width = '10px'; el.style.height = '10px'; el.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)]; el.style.borderRadius = Math.random() > 0.5 ? '50%' : '0'; el.style.pointerEvents = 'none'; el.style.zIndex = '99999'; document.body.appendChild(el);
-                    const duration = Math.random() * 2 + 1.5;
-                    el.animate([{ transform: `translate3d(0,0,0) rotate(0deg)`, opacity: 1 }, { transform: `translate3d(${Math.random()*200 - 100}px, 100vh, 0) rotate(${Math.random()*720}deg)`, opacity: 0 }], { duration: duration * 1000, easing: 'cubic-bezier(.37,0,.63,1)', forwards: true });
-                    setTimeout(() => el.remove(), duration * 1000);
-                }
+            handleMouseUp: () => {
+                WorkspaceSyncEngine.isDrawing = false;
+                if(WorkspaceSyncEngine.toolMode === 'shape' && GlobalState.roomChannel) { GlobalState.roomChannel.send({type: 'broadcast', event: 'sync_data_all', payload: {image: WorkspaceSyncEngine.canvas.toDataURL()}}); }
             },
 
             processDrawingData: (e) => {
                 const currentX = e.offsetX; const currentY = e.offsetY;
-                if (GlobalState.roomChannel) GlobalState.roomChannel.send({ type: 'broadcast', event: 'cursor', payload: { x: currentX, y: currentY, sender: GlobalState.user.nickname } });
-                if (!WorkspaceSyncEngine.isDrawing || WorkspaceSyncEngine.toolMode === 'stamp' || WorkspaceSyncEngine.toolMode === 'text') return;
+                let bType = document.getElementById('brushType').value;
                 
-                const isEraser = WorkspaceSyncEngine.toolMode === 'eraser';
-                let color = document.getElementById('colorPicker').value;
-                const width = isEraser ? document.getElementById('eraserWidth').value : document.getElementById('lineWidth').value;
-                const brushType = isEraser ? 'eraser' : document.getElementById('brushType').value;
+                if(WorkspaceSyncEngine.toolMode === 'pen' && bType === 'laser') {
+                    if(GlobalState.roomChannel) GlobalState.roomChannel.send({ type: 'broadcast', event: 'cursor', payload: { x: currentX, y: currentY, sender: GlobalState.user.nickname, isLaser: true } });
+                    return;
+                } else { if (GlobalState.roomChannel) GlobalState.roomChannel.send({ type: 'broadcast', event: 'cursor', payload: { x: currentX, y: currentY, sender: GlobalState.user.nickname, isLaser: false } }); }
 
-                // 무지개펜 로직 추가
-                if (brushType === 'rainbow') {
-                    WorkspaceSyncEngine.hue = (WorkspaceSyncEngine.hue + 2) % 360;
-                    color = `hsl(${WorkspaceSyncEngine.hue}, 100%, 50%)`;
+                if (!WorkspaceSyncEngine.isDrawing || WorkspaceSyncEngine.toolMode === 'stamp' || WorkspaceSyncEngine.toolMode === 'text' || WorkspaceSyncEngine.toolMode === 'postit' || WorkspaceSyncEngine.toolMode === 'ping' || WorkspaceSyncEngine.toolMode === 'eyedropper') return;
+                
+                let color = document.getElementById('colorPicker').value; const width = document.getElementById('lineWidth').value;
+
+                if(WorkspaceSyncEngine.toolMode === 'shape') {
+                    const shape = document.getElementById('shapeType').value; const img = new Image(); img.onload = () => {
+                        WorkspaceSyncEngine.clearCanvasLocal(); WorkspaceSyncEngine.ctx.drawImage(img, 0, 0); WorkspaceSyncEngine.ctx.beginPath();
+                        if(shape.includes('rect')) WorkspaceSyncEngine.ctx.rect(WorkspaceSyncEngine.startX, WorkspaceSyncEngine.startY, currentX - WorkspaceSyncEngine.startX, currentY - WorkspaceSyncEngine.startY);
+                        if(shape.includes('circle')) { const r = Math.sqrt(Math.pow(currentX-WorkspaceSyncEngine.startX,2)+Math.pow(currentY-WorkspaceSyncEngine.startY,2)); WorkspaceSyncEngine.ctx.arc(WorkspaceSyncEngine.startX, WorkspaceSyncEngine.startY, r, 0, 2*Math.PI); }
+                        if(shape.includes('Stroke')) { WorkspaceSyncEngine.ctx.strokeStyle = color; WorkspaceSyncEngine.ctx.lineWidth = width; WorkspaceSyncEngine.ctx.stroke(); }
+                        else { WorkspaceSyncEngine.ctx.fillStyle = color; WorkspaceSyncEngine.ctx.fill(); }
+                    }; img.src = WorkspaceSyncEngine.drawingData; return;
                 }
 
-                if (brushType === 'dashed') {
+                // NEW: 별 스탬프 브러시 거리 계산
+                if (bType === 'starBrush') {
                     const distance = Math.sqrt(Math.pow(currentX - WorkspaceSyncEngine.lastDotX, 2) + Math.pow(currentY - WorkspaceSyncEngine.lastDotY, 2));
-                    if (distance < Number(width) * 2.5) return; WorkspaceSyncEngine.lastDotX = currentX; WorkspaceSyncEngine.lastDotY = currentY;
+                    if (distance < Number(width) * 1.5) return; WorkspaceSyncEngine.lastDotX = currentX; WorkspaceSyncEngine.lastDotY = currentY;
                 }
 
-                WorkspaceSyncEngine.executeDrawStroke(WorkspaceSyncEngine.lastX, WorkspaceSyncEngine.lastY, currentX, currentY, color, width, brushType);
-
-                if (GlobalState.roomChannel) {
-                    GlobalState.roomChannel.send({ type: 'broadcast', event: 'draw', payload: { x1: WorkspaceSyncEngine.lastX, y1: WorkspaceSyncEngine.lastY, x2: currentX, y2: currentY, color, width, sender: GlobalState.user.nickname, brushType: brushType } });
+                let targetX = currentX; let targetY = currentY;
+                if (WorkspaceSyncEngine.toolMode === 'pen' && bType === 'circuit') {
+                    if (Math.abs(currentX - WorkspaceSyncEngine.lastX) > Math.abs(currentY - WorkspaceSyncEngine.lastY)) { targetY = WorkspaceSyncEngine.lastY; } else { targetX = WorkspaceSyncEngine.lastX; }
                 }
-                WorkspaceSyncEngine.lastX = currentX; WorkspaceSyncEngine.lastY = currentY;
+                
+                if (WorkspaceSyncEngine.toolMode === 'pen' && bType === 'rainbow') { WorkspaceSyncEngine.hue = (WorkspaceSyncEngine.hue + 2) % 360; color = `hsl(${WorkspaceSyncEngine.hue}, 100%, 50%)`; }
+
+                WorkspaceSyncEngine.executeDrawStroke(WorkspaceSyncEngine.lastX, WorkspaceSyncEngine.lastY, targetX, targetY, color, width, WorkspaceSyncEngine.toolMode === 'eraser' ? 'eraser' : bType, false, WorkspaceSyncEngine.isSymmetry);
+                if (GlobalState.roomChannel) { GlobalState.roomChannel.send({ type: 'broadcast', event: 'draw', payload: { x1: WorkspaceSyncEngine.lastX, y1: WorkspaceSyncEngine.lastY, x2: targetX, y2: targetY, color, width, brushType: WorkspaceSyncEngine.toolMode === 'eraser' ? 'eraser' : bType, isSym: WorkspaceSyncEngine.isSymmetry } }); }
+                WorkspaceSyncEngine.lastX = targetX; WorkspaceSyncEngine.lastY = targetY;
             },
             
-            executeDrawStroke: (x1, y1, x2, y2, color, width, brushType) => {
+            executeDrawStroke: (x1, y1, x2, y2, color, width, brushType, isMirrorLayer = false, applySymmetry = false) => {
                 const c = WorkspaceSyncEngine.ctx; c.save(); 
-                if (brushType === 'eraser') {
-                    c.globalCompositeOperation = 'destination-out'; c.strokeStyle = 'rgba(0,0,0,1)';
-                    c.lineWidth = width; c.lineCap = 'round'; c.lineJoin = 'round';
-                    c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
-                } else if (brushType === 'dashed') {
-                    c.globalAlpha = 1.0; c.fillStyle = color;
-                    c.beginPath(); c.arc(x2, y2, width / 2, 0, Math.PI * 2); c.fill();
-                } else {
-                    c.strokeStyle = color; c.lineWidth = width; c.lineCap = 'round'; c.lineJoin = 'round';
-                    c.globalAlpha = 1.0; c.shadowBlur = 0; c.shadowColor = 'transparent'; c.setLineDash([]);
-                    
-                    if (brushType === 'highlighter') { 
-                        c.globalAlpha = 0.35; 
-                    } 
-                    else if (brushType === 'shadow') { 
-                        c.shadowBlur = 18; c.shadowColor = color; 
-                    } 
-                    else if (brushType === 'marker') { 
-                        c.globalAlpha = 0.75; c.lineCap = 'square'; c.lineJoin = 'miter'; 
-                    }
-                    else if (brushType === 'water') { 
-                        // 수채화펜 개선: 더 리얼한 물감 덧칠 및 번짐 효과
-                        c.globalAlpha = 0.08; 
-                        c.shadowBlur = Number(width) * 1.5; 
-                        c.shadowColor = color; 
-                        
-                        // 1. 넓고 옅은 물 번짐
-                        c.lineWidth = Number(width) * 1.5;
-                        c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
-                        
-                        // 2. 중간 덧칠
-                        c.globalAlpha = 0.15;
-                        c.lineWidth = Number(width);
-                        c.stroke();
-                        
-                        // 3. 중심부 진한 색상
-                        c.globalAlpha = 0.3;
-                        c.lineWidth = Number(width) * 0.4;
-                        c.stroke();
-                    }
+                c.strokeStyle = color; c.lineWidth = width; c.lineCap = 'round'; c.lineJoin = 'round'; c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1.0; c.shadowBlur = 0;
+                
+                if (brushType === 'eraser') { c.globalCompositeOperation = 'destination-out'; c.strokeStyle = 'rgba(0,0,0,1)'; } 
+                else if (brushType === 'highlighter') { c.globalAlpha = 0.35; } 
+                else if (brushType === 'circuit') { c.lineCap = 'square'; c.lineJoin = 'miter'; }
+                else if (brushType === 'water') { c.globalAlpha = 0.08; c.shadowBlur = Number(width)*1.5; c.shadowColor = color; c.lineWidth = Number(width)*1.5; c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke(); c.globalAlpha = 0.15; c.lineWidth = Number(width); c.stroke(); c.globalAlpha = 0.3; c.lineWidth = Number(width)*0.4; }
 
-                    if (brushType !== 'water') {
-                        c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
-                    }
+                // NEW: 별 스탬프 브러시 렌더링
+                if (brushType === 'starBrush') {
+                    c.font = `${width * 2}px sans-serif`; c.fillStyle = color;
+                    c.fillText('⭐', x2 - width, y2 + width);
+                } else {
+                    c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke(); 
                 }
                 c.restore();
+                if(applySymmetry && !isMirrorLayer) { const centerX = WorkspaceSyncEngine.canvas.width / 2; const mirX1 = centerX + (centerX - x1); const mirX2 = centerX + (centerX - x2); WorkspaceSyncEngine.executeDrawStroke(mirX1, y1, mirX2, y2, color, width, brushType, true, false); }
             },
             
-            executeDrawText: (x, y, text, color, size) => {
-                const c = WorkspaceSyncEngine.ctx; c.save();
-                c.font = `bold ${size}px sans-serif`; c.fillStyle = color;
-                c.fillText(text, x, y + Number(size)/3); c.restore();
+            executeDrawPostit: (x, y, text, color) => {
+                const c = WorkspaceSyncEngine.ctx; c.save(); c.shadowBlur = 6; c.shadowColor = 'rgba(0,0,0,0.2)'; c.shadowOffsetX = 3; c.shadowOffsetY = 3; c.fillStyle = '#fef08a'; c.fillRect(x, y, 140, 140); c.shadowBlur = 0; c.shadowOffsetX = 0; c.shadowOffsetY = 0; c.fillStyle = color || '#0f172a'; c.font = 'bold 15px sans-serif';
+                const words = text.split(''); let line = ''; let ly = y + 25;
+                for(let n=0; n<words.length; n++) { let testLine = line + words[n]; if(c.measureText(testLine).width > 120 && n > 0) { c.fillText(line, x+10, ly); line = words[n]; ly += 20; } else { line = testLine; } }
+                c.fillText(line, x+10, ly); c.restore();
             },
 
-            updateLiveCursor: (x, y, sender) => {
+            executeDrawText: (x, y, text, color, size) => { const c = WorkspaceSyncEngine.ctx; c.save(); c.font = `bold ${size}px sans-serif`; c.fillStyle = color; c.fillText(text, x, y + Number(size)/3); c.restore(); },
+
+            spawnPing: (x, y, sender) => {
+                const container = document.getElementById('canvasWrapper'); const ripple = document.createElement('div'); ripple.className = 'ping-ripple'; ripple.style.left = x + 'px'; ripple.style.top = y + 'px'; const label = document.createElement('div'); label.className = 'ping-label'; label.innerText = sender + " 핑!"; label.style.left = x + 'px'; label.style.top = y + 'px'; container.appendChild(ripple); container.appendChild(label); setTimeout(() => { ripple.remove(); label.remove(); }, 1500);
+            },
+
+            updateLiveCursor: (x, y, sender, isLaser = false) => {
                 const container = document.getElementById('canvasWrapper'); let cursorEl = document.getElementById('cursor_' + sender);
-                if (!cursorEl) {
-                    cursorEl = document.createElement('div'); cursorEl.id = 'cursor_' + sender; cursorEl.className = 'live-cursor';
-                    cursorEl.innerHTML = `<svg class="cursor-pointer-svg" viewBox="0 0 24 24"><path d="M7 2l12 11.2-5.8.5 3.3 7.3-2.2.9-3.2-7.4-4.4 4.7z"/></svg><div class="cursor-label">${sender}</div>`;
-                    container.appendChild(cursorEl);
-                }
-                cursorEl.style.transform = `translate3d(${x}px, ${y}px, 0px)`;
-                clearTimeout(WorkspaceSyncEngine.cursorTimeouts[sender]);
-                WorkspaceSyncEngine.cursorTimeouts[sender] = setTimeout(() => { if (cursorEl && cursorEl.parentNode) cursorEl.remove(); }, 5000);
+                if (!cursorEl) { cursorEl = document.createElement('div'); cursorEl.id = 'cursor_' + sender; container.appendChild(cursorEl); }
+                if(isLaser) { cursorEl.className = 'laser-pointer-dot'; cursorEl.innerHTML = ''; cursorEl.style.left = x + 'px'; cursorEl.style.top = y + 'px'; cursorEl.style.transform = 'translate(-50%, -50%)'; } 
+                else { cursorEl.className = 'live-cursor'; cursorEl.innerHTML = `<svg class="cursor-pointer-svg" viewBox="0 0 24 24"><path d="M7 2l12 11.2-5.8.5 3.3 7.3-2.2.9-3.2-7.4-4.4 4.7z"/></svg><div class="cursor-label">${sender}</div>`; cursorEl.style.transform = `translate3d(${x}px, ${y}px, 0px)`; cursorEl.style.left = '0'; cursorEl.style.top = '0'; }
+                clearTimeout(WorkspaceSyncEngine.cursorTimeouts[sender]); WorkspaceSyncEngine.cursorTimeouts[sender] = setTimeout(() => { if (cursorEl && cursorEl.parentNode) cursorEl.remove(); }, 2000);
+            },
+
+            triggerConfettiLocal: () => { WorkspaceSyncEngine.spawnConfetti(); if (GlobalState.roomChannel) GlobalState.roomChannel.send({ type: 'broadcast', event: 'confetti', payload: { sender: GlobalState.user.nickname } }); },
+            spawnConfetti: () => {
+                const colors = GlobalState.isSummerEvent ? ['#0ea5e9', '#38bdf8', '#7dd3fc', '#bae6fd'] : ['#ef4444', '#3b82f6', '#10b981', '#facc15', '#a855f7'];
+                for(let i=0; i<50; i++) { const el = document.createElement('div'); el.style.position = 'fixed'; el.style.left = Math.random() * 100 + 'vw'; el.style.top = '-20px'; el.style.width = '10px'; el.style.height = '10px'; el.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)]; el.style.borderRadius = Math.random() > 0.5 ? '50%' : '0'; el.style.pointerEvents = 'none'; el.style.zIndex = '99999'; document.body.appendChild(el); const duration = Math.random() * 2 + 1.5; el.animate([{ transform: `translate3d(0,0,0) rotate(0deg)`, opacity: 1 }, { transform: `translate3d(${Math.random()*200 - 100}px, 100vh, 0) rotate(${Math.random()*720}deg)`, opacity: 0 }], { duration: duration * 1000, easing: 'cubic-bezier(.37,0,.63,1)', forwards: true }); setTimeout(() => el.remove(), duration * 1000); }
             },
 
             connectRealtimePipeline: () => {
                 GlobalState.roomChannel = client.channel(`room_pipe_${GlobalState.currentRoom.id}`);
                 GlobalState.roomChannel
-                    // 현재 인원 관리용 통신 로직 추가
-                    .on('broadcast', { event: 'user_join' }, (p) => {
-                        GlobalState.roomParticipants.add(p.payload.sender);
-                        WorkspaceSyncEngine.updateParticipantsUI();
-                        WorkspaceSyncEngine.appendUserMsg("System", `${p.payload.sender} 님이 방에 입장하셨습니다.`, true);
-                        GlobalState.roomChannel.send({ type: 'broadcast', event: 'user_present', payload: { sender: GlobalState.user.nickname } });
-                    })
-                    .on('broadcast', { event: 'user_present' }, (p) => {
-                        GlobalState.roomParticipants.add(p.payload.sender);
-                        WorkspaceSyncEngine.updateParticipantsUI();
-                    })
-                    .on('broadcast', { event: 'user_leave' }, (p) => {
-                        GlobalState.roomParticipants.delete(p.payload.sender);
-                        WorkspaceSyncEngine.updateParticipantsUI();
-                        WorkspaceSyncEngine.appendUserMsg("System", `${p.payload.sender} 님이 방에서 퇴장하셨습니다.`, true);
-                    })
-                    // 드로잉 데이터
-                    .on('broadcast', { event: 'draw' }, (p) => { const d = p.payload; if (d.sender !== GlobalState.user.nickname) { WorkspaceSyncEngine.executeDrawStroke(d.x1, d.y1, d.x2, d.y2, d.color, d.width, d.brushType); } })
-                    .on('broadcast', { event: 'text' }, (p) => { const d = p.payload; if (d.sender !== GlobalState.user.nickname) { WorkspaceSyncEngine.executeDrawText(d.x, d.y, d.text, d.color, d.size); } })
+                    .on('broadcast', { event: 'user_join' }, (p) => { GlobalState.roomParticipants.add(p.payload.sender); WorkspaceSyncEngine.updateParticipantsUI(); GlobalState.roomChannel.send({ type: 'broadcast', event: 'user_present', payload: { sender: GlobalState.user.nickname } }); })
+                    .on('broadcast', { event: 'user_present' }, (p) => { GlobalState.roomParticipants.add(p.payload.sender); WorkspaceSyncEngine.updateParticipantsUI(); })
+                    .on('broadcast', { event: 'user_leave' }, (p) => { GlobalState.roomParticipants.delete(p.payload.sender); WorkspaceSyncEngine.updateParticipantsUI(); })
+                    .on('broadcast', { event: 'kick_user' }, (p) => { if(p.payload.target === GlobalState.user.nickname) { alert('방장에 의해 강퇴되었습니다.'); RoomController.handleExitRoom(); } })
+                    .on('broadcast', { event: 'timer' }, (p) => { if(p.payload.action === 'start') WorkspaceSyncEngine.startTimer(p.payload.seconds); else WorkspaceSyncEngine.stopTimer(); })
+                    .on('broadcast', { event: 'draw' }, (p) => { const d = p.payload; WorkspaceSyncEngine.executeDrawStroke(d.x1, d.y1, d.x2, d.y2, d.color, d.width, d.brushType, false, d.isSym); })
+                    .on('broadcast', { event: 'text' }, (p) => { const d = p.payload; WorkspaceSyncEngine.executeDrawText(d.x, d.y, d.text, d.color, d.size); })
+                    .on('broadcast', { event: 'postit' }, (p) => { const d = p.payload; WorkspaceSyncEngine.executeDrawPostit(d.x, d.y, d.text, d.color); })
+                    .on('broadcast', { event: 'ping' }, (p) => { WorkspaceSyncEngine.spawnPing(p.payload.x, p.payload.y, p.payload.sender); })
+                    .on('broadcast', { event: 'change_bg' }, (p) => { WorkspaceSyncEngine.applyCanvasBackground(p.payload.bg); })
                     .on('broadcast', { event: 'chat' }, (p) => { WorkspaceSyncEngine.appendUserMsg(p.payload.sender, p.payload.message); })
-                    .on('broadcast', { event: 'reaction' }, (p) => { const d = p.payload; WorkspaceSyncEngine.spawnFloatingReaction(d.x, d.y, d.emoji); })
+                    .on('broadcast', { event: 'reaction' }, (p) => { WorkspaceSyncEngine.spawnFloatingReaction(p.payload.x, p.payload.y, p.payload.emoji); })
                     .on('broadcast', { event: 'confetti' }, (p) => { WorkspaceSyncEngine.spawnConfetti(); })
-                    .on('broadcast', { event: 'cursor' }, (p) => { const d = p.payload; if (d.sender !== GlobalState.user.nickname) { WorkspaceSyncEngine.updateLiveCursor(d.x, d.y, d.sender); } })
+                    .on('broadcast', { event: 'cursor' }, (p) => { const d = p.payload; if(d.sender !== GlobalState.user.nickname) WorkspaceSyncEngine.updateLiveCursor(d.x, d.y, d.sender, d.isLaser); })
+                    .on('broadcast', { event: 'sync_data_all' }, (p) => { const img = new Image(); img.onload = () => { WorkspaceSyncEngine.clearCanvasLocal(); WorkspaceSyncEngine.ctx.drawImage(img, 0, 0); }; img.src = p.payload.image; })
                     .on('broadcast', { event: 'clear' }, () => { WorkspaceSyncEngine.clearCanvasLocal(); })
                     .on('broadcast', { event: 'request_sync' }, (p) => { if (GlobalState.currentRoom && (GlobalState.currentRoom.createdBy === GlobalState.user.nickname || GlobalState.isAdmin)) { const dataUrl = WorkspaceSyncEngine.canvas.toDataURL('image/png'); GlobalState.roomChannel.send({ type: 'broadcast', event: 'sync_data', payload: { image: dataUrl, targetUser: p.payload.sender } }); } })
-                    .on('broadcast', { event: 'sync_data' }, (p) => { const d = p.payload; if (d.targetUser === GlobalState.user.nickname) { const img = new Image(); img.onload = () => { WorkspaceSyncEngine.ctx.drawImage(img, 0, 0); WorkspaceSyncEngine.appendUserMsg("System", "최근 캔버스 상태가 동기화되었습니다.", true); }; img.src = d.image; } })
-                    .on('broadcast', { event: 'sync_data_all' }, (p) => { const d = p.payload; const img = new Image(); img.onload = () => { WorkspaceSyncEngine.clearCanvasLocal(); WorkspaceSyncEngine.ctx.drawImage(img, 0, 0); }; img.src = d.image; })
-                    .subscribe((status) => {
-                        if (status === 'SUBSCRIBED') {
-                            GlobalState.roomParticipants.add(GlobalState.user.nickname);
-                            WorkspaceSyncEngine.updateParticipantsUI();
-                            WorkspaceSyncEngine.appendUserMsg("System", "채팅방 서버와 성공적으로 연결되었습니다.", true);
-                        }
-                    });
+                    .on('broadcast', { event: 'sync_data' }, (p) => { const d = p.payload; if (d.targetUser === GlobalState.user.nickname) { const img = new Image(); img.onload = () => { WorkspaceSyncEngine.ctx.drawImage(img, 0, 0); }; img.src = d.image; } })
+                    .subscribe((status) => { if (status === 'SUBSCRIBED') { GlobalState.roomParticipants.add(GlobalState.user.nickname); WorkspaceSyncEngine.updateParticipantsUI(); } });
             },
             
-            sendChatPacket: () => {
-                const input = document.getElementById('chatInput'); const text = input.value.trim(); if (!text) return;
-                WorkspaceSyncEngine.appendUserMsg(GlobalState.user.nickname, text); input.value = '';
-                if (GlobalState.roomChannel) {
-                    GlobalState.roomChannel.send({ type: 'broadcast', event: 'chat', payload: { sender: GlobalState.user.nickname, message: text } });
+            sendChatPacket: () => { const input = document.getElementById('chatInput'); const text = input.value.trim(); if (!text) return; WorkspaceSyncEngine.appendUserMsg(GlobalState.user.nickname, text); input.value = ''; if (GlobalState.roomChannel) GlobalState.roomChannel.send({ type: 'broadcast', event: 'chat', payload: { sender: GlobalState.user.nickname, message: text } }); },
+            
+            appendUserMsg: (sender, msg, isSystem = false) => { 
+                const container = document.getElementById('chatMessages'); const div = document.createElement('div'); div.className = 'chat-msg' + (isSystem ? ' system' : ''); div.innerHTML = isSystem ? msg : `<b>${sender}:</b> ${msg}`; container.appendChild(div); container.scrollTop = container.scrollHeight; 
+                // NEW: TTS 기능 연동
+                if(GlobalState.ttsEnabled && !isSystem && sender !== GlobalState.user.nickname) {
+                    try { const utterance = new SpeechSynthesisUtterance(`${sender}님의 메시지. ${msg}`); speechSynthesis.speak(utterance); } catch(e){}
                 }
             },
             
-            appendUserMsg: (sender, msg, isSystem = false) => {
-                const container = document.getElementById('chatMessages'); const div = document.createElement('div'); div.className = 'chat-msg' + (isSystem ? ' system' : '');
-                div.innerHTML = isSystem ? msg : `<b>${sender}:</b> ${msg}`; container.appendChild(div); container.scrollTop = container.scrollHeight;
-            },
+            spawnFloatingReaction: (x, y, emoji) => { const el = document.createElement('div'); el.className = 'floating-reaction'; el.innerText = emoji; el.style.left = (x - 20) + 'px'; el.style.top = (y - 20) + 'px'; document.getElementById('canvasWrapper').appendChild(el); setTimeout(() => el.remove(), 3000); },
             
             getExportCanvas: () => {
                 const tempCanvas = document.createElement('canvas'); tempCanvas.width = WorkspaceSyncEngine.canvas.width; tempCanvas.height = WorkspaceSyncEngine.canvas.height;
-                const tCtx = tempCanvas.getContext('2d'); tCtx.fillStyle = '#ffffff'; tCtx.fillRect(0,0, tempCanvas.width, tempCanvas.height); tCtx.drawImage(WorkspaceSyncEngine.canvas, 0, 0); return tempCanvas;
+                const tCtx = tempCanvas.getContext('2d');
+                const bgSelect = document.getElementById('bgTemplate').value;
+                if(bgSelect === 'blueprint') { tCtx.fillStyle = '#1e3a8a'; } else if(bgSelect === 'blackboard') { tCtx.fillStyle = '#14532d'; } else { tCtx.fillStyle = '#ffffff'; }
+                tCtx.fillRect(0,0, tempCanvas.width, tempCanvas.height);
+                tCtx.drawImage(WorkspaceSyncEngine.canvas, 0, 0); return tempCanvas;
             },
 
             handleCloudAndLocalSave: async () => {
-                if (GlobalState.user.isGuest) {
-                    const a = document.createElement('a'); a.download = `export_${GlobalState.currentRoom.name}.png`; a.href = WorkspaceSyncEngine.getExportCanvas().toDataURL('image/png'); a.click();
-                    return alert("게스트는 로컬 기기 다운로드만 지원됩니다.");
-                }
+                if (GlobalState.user.isGuest) { const a = document.createElement('a'); a.download = `export_${GlobalState.currentRoom.name}.png`; a.href = WorkspaceSyncEngine.getExportCanvas().toDataURL('image/png'); a.click(); return alert("게스트는 로컬 다운로드만 지원됩니다."); }
                 const saveBtn = document.getElementById('saveBtn'); saveBtn.disabled = true; saveBtn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> 저장 중...";
                 try {
                     const blob = await new Promise(resolve => WorkspaceSyncEngine.getExportCanvas().toBlob(resolve, 'image/png'));
                     const fileName = `art_${Date.now()}_${Math.random().toString(36).substr(2, 5)}.png`;
                     const { error: storageError } = await client.storage.from('artworks').upload(fileName, blob); if (storageError) throw storageError;
-                    const { data: urlData } = client.storage.from('artworks').getPublicUrl(fileName); const publicUrl = urlData.publicUrl;
-                    const collaboratorsList = Array.from(GlobalState.roomParticipants).join(', ');
-                    const { error: dbError } = await client.from('artworks').insert([{ room_name: GlobalState.currentRoom.name, image_url: publicUrl, creator: GlobalState.user.nickname, collaborators: collaboratorsList, is_featured: false }]); if (dbError) throw dbError;
+                    const { data: urlData } = client.storage.from('artworks').getPublicUrl(fileName);
+                    const { error: dbError } = await client.from('artworks').insert([{ room_name: GlobalState.currentRoom.name, image_url: urlData.publicUrl, creator: GlobalState.user.nickname, collaborators: Array.from(GlobalState.roomParticipants).join(', '), is_featured: false }]); if (dbError) throw dbError;
                     const a = document.createElement('a'); a.download = `export_${GlobalState.currentRoom.name}.png`; a.href = WorkspaceSyncEngine.getExportCanvas().toDataURL('image/png'); a.click();
                     alert("성공적으로 다운로드 및 서버 보관함에 등록되었습니다!");
                 } catch (err) { alert("저장 실패: " + err.message); } finally { saveBtn.disabled = false; saveBtn.innerHTML = "<i class='fas fa-save'></i> 클라우드 저장"; }
@@ -1078,7 +1147,12 @@
 
         window.onload = () => { 
             AuthController.bindEvents(); ProfileController.bindEvents(); SystemConfigController.bindAdminEvents(); 
-            RoomController.bindEvents(); CommunityController.bindEvents(); WorkspaceSyncEngine.initCanvasEngine(); 
+            RoomController.bindEvents(); CommunityController.bindEvents(); WorkspaceSyncEngine.initCanvasEngine();
+            
+            document.getElementById('toggleDarkModeBtn').addEventListener('click', toggleDarkMode);
+            document.getElementById('toggleDarkModeLobby').addEventListener('click', toggleDarkMode);
+            document.getElementById('adminPanelBtn').addEventListener('click', () => { SystemConfigController.loadAdminUserList(); SystemConfigController.loadAdminReportList(); SystemConfigController.loadAdminArtworkList(); document.getElementById('adminModal').classList.remove('hidden'); });
+            document.getElementById('closeAdminModalBtn').addEventListener('click', () => document.getElementById('adminModal').classList.add('hidden'));
         };
     </script>
 </body>
