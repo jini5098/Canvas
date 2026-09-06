@@ -1,6 +1,8 @@
 -- Canvas secure workspace migration
 -- Run once in the Supabase SQL editor before deploying the matching frontend.
 
+begin;
+
 create extension if not exists pgcrypto;
 create schema if not exists private;
 revoke all on schema private from public, anon, authenticated;
@@ -305,7 +307,11 @@ create policy profiles_read_self_or_admin on public.profiles for select to authe
 using (id = (select auth.uid()) or private.is_admin());
 create policy profiles_update_self on public.profiles for update to authenticated
 using (id = (select auth.uid()) and private.is_active_user())
-with check (id = (select auth.uid()) and private.is_active_user());
+with check (
+    id = (select auth.uid())
+    and private.is_active_user()
+    and nickname ~ '^[가-힣A-Za-z0-9_.-]{2,20}$'
+);
 
 create policy settings_read_safe on public.system_settings for select to authenticated
 using (private.is_active_user() and key in ('notice', 'guide', 'summer_event'));
@@ -608,3 +614,5 @@ with check (
 -- After this migration:
 -- 1. Set the owner's role once: update public.profiles set role = 'admin' where id = '<OWNER USER UUID>';
 -- 2. In Realtime Settings, turn off "Allow public access" so private-channel policies are enforced.
+
+commit;

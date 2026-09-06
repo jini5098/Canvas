@@ -55,6 +55,8 @@ test('manifest and service worker are scoped to the project folder', () => {
 });
 
 test('database migration hashes passwords and enforces private channels', () => {
+  assert.match(migration, /\nbegin;\s*\n/i);
+  assert.match(migration, /commit;\s*$/i);
   assert.match(migration, /crypt\(p_password, gen_salt\('bf'\)\)/);
   assert.doesNotMatch(migration, /workspace_rooms[\s\S]{0,500}\bpassword\s+text/i);
   assert.match(migration, /alter table public\.profiles enable row level security/i);
@@ -62,6 +64,7 @@ test('database migration hashes passwords and enforces private channels', () => 
   assert.match(migration, /\(select realtime\.topic\(\)\)/i);
   assert.match(migration, /room-server:/);
   assert.match(migration, /canvas-artworks/);
+  assert.match(migration, /nickname ~ '\^\[가-힣A-Za-z0-9_.-\]\{2,20\}\$'/);
 });
 
 test('canvas helpers clamp input and wait for every sync chunk', () => {
