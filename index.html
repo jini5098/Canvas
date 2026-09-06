@@ -730,8 +730,8 @@
                 const reason = prompt(`[${targetUser}] 님을 신고하시는 사유를 입력해 주세요:\n(예: 욕설, 부적절한 그림 등)`); if(!reason || reason.trim() === '') return alert("신고 사유를 입력해야 접수됩니다.");
                 if (reason.trim().length > 2000) return alert('신고 사유는 2,000자 이내로 작성해주세요.');
                 try {
-                    const { data: target, error: targetError } = await client.from('public_profiles').select('id,nickname').eq('nickname', targetUser.trim()).maybeSingle();
-                    if (targetError) throw targetError; if (!target) return alert("해당 닉네임의 사용자를 찾지 못했습니다.");
+                    const { data: targetRows, error: targetError } = await client.rpc('find_canvas_profile_by_nickname', { p_nickname: targetUser.trim() });
+                    if (targetError) throw targetError; const target = Array.isArray(targetRows) ? targetRows[0] : targetRows; if (!target) return alert("해당 닉네임의 사용자를 찾지 못했습니다.");
                     if (target.id === GlobalState.user.id) return alert('자기 자신은 신고할 수 없습니다.');
                     const { error } = await client.from('reports').insert([{ reporter_id: GlobalState.user.id, target_user_id: target.id, reporter: GlobalState.user.nickname, target_user: target.nickname, reason: reason.trim(), content: "워크스페이스 내부 직접 신고" }]); if(error) throw error;
                     alert(`정상적으로 접수되었습니다. 관리자 확인 후 조치됩니다.`);

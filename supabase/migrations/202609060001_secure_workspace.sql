@@ -7,6 +7,53 @@ create extension if not exists pgcrypto;
 create schema if not exists private;
 revoke all on schema private from public, anon, authenticated;
 
+-- Keep a private, pre-migration recovery snapshot. Room passwords are never
+-- copied as plaintext; only a one-way bcrypt hash is retained.
+create schema if not exists canvas_backup_20260906;
+revoke all on schema canvas_backup_20260906 from public, anon, authenticated;
+do $$
+declare
+    source_table text;
+begin
+    foreach source_table in array array[
+        'profiles', 'artworks', 'community_posts', 'community_comments',
+        'reports', 'system_settings'
+    ]
+    loop
+        if to_regclass('public.' || source_table) is not null
+           and to_regclass('canvas_backup_20260906.' || source_table) is null then
+            execute format(
+                'create table canvas_backup_20260906.%I as table public.%I with data',
+                source_table,
+                source_table
+            );
+        end if;
+    end loop;
+
+    if to_regclass('public.rooms') is not null
+       and to_regclass('canvas_backup_20260906.rooms') is null then
+        execute $backup_rooms$
+            create table canvas_backup_20260906.rooms as
+            select id, name, is_private,
+                   case
+                       when nullif(password, '') is null then null
+                       else extensions.crypt(password, extensions.gen_salt('bf'))
+                   end as password_hash,
+                   created_at, created_by
+            from public.rooms
+        $backup_rooms$;
+    end if;
+
+    if to_regclass('storage.objects') is not null
+       and to_regclass('canvas_backup_20260906.storage_objects') is null then
+        execute $backup_storage$
+            create table canvas_backup_20260906.storage_objects as
+            select * from storage.objects where bucket_id in ('artworks', 'canvas-artworks')
+        $backup_storage$;
+    end if;
+end $$;
+revoke all on all tables in schema canvas_backup_20260906 from public, anon, authenticated;
+
 create table if not exists public.profiles (
     id uuid primary key references auth.users(id) on delete cascade,
     email text,
@@ -21,10 +68,21 @@ alter table public.profiles add column if not exists created_at timestamptz not 
 alter table public.profiles add column if not exists role text not null default 'member';
 alter table public.profiles add column if not exists banned_until timestamptz;
 alter table public.profiles add column if not exists updated_at timestamptz not null default now();
+alter table public.profiles alter column email drop not null;
+update public.profiles set is_banned = false where is_banned is null;
+update public.profiles set created_at = now() where created_at is null;
+alter table public.profiles alter column is_banned set default false;
+alter table public.profiles alter column is_banned set not null;
+alter table public.profiles alter column created_at set default now();
+alter table public.profiles alter column created_at set not null;
 alter table public.profiles drop constraint if exists profiles_role_check;
 alter table public.profiles add constraint profiles_role_check check (role in ('member', 'admin'));
 
-update public.profiles set nickname = 'user_' || substr(id::text, 1, 12) where nickname is null or btrim(nickname) = '';
+update public.profiles
+set nickname = 'user_' || substr(id::text, 1, 12)
+where nickname is null
+   or btrim(nickname) = ''
+   or nickname !~ '^[가-힣A-Za-z0-9_.-]{2,20}$';
 with duplicate_names as (
     select id, row_number() over (partition by lower(nickname) order by created_at nulls last, id) as position
     from public.profiles
@@ -40,6 +98,10 @@ select users.id, users.email, 'user_' || substr(users.id::text, 1, 12)
 from auth.users as users
 where not exists (select 1 from public.profiles where profiles.id = users.id)
 on conflict (id) do nothing;
+
+alter table public.profiles drop constraint if exists profiles_nickname_format_check;
+alter table public.profiles add constraint profiles_nickname_format_check
+check (nickname ~ '^[가-힣A-Za-z0-9_.-]{2,20}$');
 
 create or replace function private.is_active_user()
 returns boolean
@@ -103,7 +165,9 @@ end;
 $$;
 revoke all on function private.normalize_nickname(text, uuid) from public, anon, authenticated;
 
-create or replace function public.handle_new_canvas_user()
+drop trigger if exists on_canvas_auth_user_created on auth.users;
+drop function if exists public.handle_new_canvas_user();
+create or replace function private.handle_new_canvas_user()
 returns trigger
 language plpgsql
 security definer
@@ -121,13 +185,15 @@ begin
     return new;
 end;
 $$;
+revoke all on function private.handle_new_canvas_user() from public, anon, authenticated;
 
-drop trigger if exists on_canvas_auth_user_created on auth.users;
 create trigger on_canvas_auth_user_created
 after insert on auth.users
-for each row execute function public.handle_new_canvas_user();
+for each row execute function private.handle_new_canvas_user();
 
-create or replace function public.touch_canvas_updated_at()
+drop trigger if exists touch_canvas_profiles_updated_at on public.profiles;
+drop function if exists public.touch_canvas_updated_at();
+create or replace function private.touch_canvas_updated_at()
 returns trigger
 language plpgsql
 set search_path = ''
@@ -137,10 +203,10 @@ begin
     return new;
 end;
 $$;
+revoke all on function private.touch_canvas_updated_at() from public, anon, authenticated;
 
-drop trigger if exists touch_canvas_profiles_updated_at on public.profiles;
 create trigger touch_canvas_profiles_updated_at before update on public.profiles
-for each row execute function public.touch_canvas_updated_at();
+for each row execute function private.touch_canvas_updated_at();
 
 create table if not exists public.workspace_rooms (
     id uuid primary key default gen_random_uuid(),
@@ -166,7 +232,83 @@ create index if not exists workspace_room_members_user_idx on public.workspace_r
 
 drop trigger if exists touch_canvas_rooms_updated_at on public.workspace_rooms;
 create trigger touch_canvas_rooms_updated_at before update on public.workspace_rooms
-for each row execute function public.touch_canvas_updated_at();
+for each row execute function private.touch_canvas_updated_at();
+
+-- Move every legacy room only when its text owner can be resolved exactly.
+-- Any mismatch aborts the transaction instead of silently assigning ownership.
+do $$
+begin
+    if to_regclass('public.rooms') is not null then
+        if exists (
+            select 1
+            from public.rooms as legacy_room
+            where not exists (
+                select 1 from public.profiles as profile
+                where lower(profile.nickname) = lower(legacy_room.created_by)
+            )
+        ) then
+            raise exception 'a legacy room owner could not be matched to a profile';
+        end if;
+
+        insert into public.workspace_rooms (
+            id, name, created_by, creator_nickname, is_private,
+            password_hash, active, created_at, updated_at
+        )
+        select legacy_room.id,
+               left(btrim(legacy_room.name), 60),
+               profile.id,
+               profile.nickname,
+               coalesce(legacy_room.is_private, false)
+                   and nullif(legacy_room.password, '') is not null,
+               case
+                   when coalesce(legacy_room.is_private, false)
+                        and nullif(legacy_room.password, '') is not null
+                   then extensions.crypt(legacy_room.password, extensions.gen_salt('bf'))
+                   else null
+               end,
+               true,
+               coalesce(legacy_room.created_at, now()),
+               coalesce(legacy_room.created_at, now())
+        from public.rooms as legacy_room
+        join public.profiles as profile
+          on lower(profile.nickname) = lower(legacy_room.created_by)
+        on conflict (id) do nothing;
+
+        insert into public.workspace_room_members (room_id, user_id, nickname, joined_at)
+        select room.id, room.created_by, room.creator_nickname, room.created_at
+        from public.workspace_rooms as room
+        join public.rooms as legacy_room on legacy_room.id = room.id
+        on conflict (room_id, user_id) do update set nickname = excluded.nickname;
+
+        -- The secured room and private backup now contain only password hashes.
+        update public.rooms set password = null where password is not null;
+    end if;
+end $$;
+
+create or replace function private.sync_canvas_nickname()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+    if new.nickname is distinct from old.nickname then
+        update public.workspace_rooms
+        set creator_nickname = new.nickname
+        where created_by = new.id;
+
+        update public.workspace_room_members
+        set nickname = new.nickname
+        where user_id = new.id;
+    end if;
+    return new;
+end;
+$$;
+revoke all on function private.sync_canvas_nickname() from public, anon, authenticated;
+drop trigger if exists sync_canvas_profile_nickname on public.profiles;
+create trigger sync_canvas_profile_nickname
+after update of nickname on public.profiles
+for each row execute function private.sync_canvas_nickname();
 
 create or replace function private.is_room_member(room uuid)
 returns boolean
@@ -209,6 +351,10 @@ create table if not exists public.system_settings (
     value text not null default '',
     updated_at timestamptz not null default now()
 );
+alter table public.system_settings add column if not exists updated_at timestamptz not null default now();
+drop trigger if exists touch_canvas_settings_updated_at on public.system_settings;
+create trigger touch_canvas_settings_updated_at before update on public.system_settings
+for each row execute function private.touch_canvas_updated_at();
 insert into public.system_settings (key, value) values
     ('notice', 'Canvas에 오신 것을 환영합니다.'),
     ('guide', '방을 만들거나 공개방에 입장해 함께 그려보세요.'),
@@ -216,7 +362,7 @@ insert into public.system_settings (key, value) values
 on conflict (key) do nothing;
 
 create table if not exists public.community_posts (
-    id bigint generated by default as identity primary key,
+    id uuid primary key default gen_random_uuid(),
     category text not null default 'free',
     title text not null,
     content text not null,
@@ -226,8 +372,8 @@ create table if not exists public.community_posts (
 alter table public.community_posts add column if not exists author_id uuid references auth.users(id) on delete set null;
 
 create table if not exists public.community_comments (
-    id bigint generated by default as identity primary key,
-    post_id bigint not null references public.community_posts(id) on delete cascade,
+    id uuid primary key default gen_random_uuid(),
+    post_id uuid not null references public.community_posts(id) on delete cascade,
     content text not null,
     author text not null,
     created_at timestamptz not null default now()
@@ -235,7 +381,7 @@ create table if not exists public.community_comments (
 alter table public.community_comments add column if not exists author_id uuid references auth.users(id) on delete set null;
 
 create table if not exists public.reports (
-    id bigint generated by default as identity primary key,
+    id uuid primary key default gen_random_uuid(),
     reporter text,
     target_user text,
     reason text not null,
@@ -246,7 +392,7 @@ alter table public.reports add column if not exists reporter_id uuid references 
 alter table public.reports add column if not exists target_user_id uuid references auth.users(id) on delete set null;
 
 create table if not exists public.artworks (
-    id bigint generated by default as identity primary key,
+    id uuid primary key default gen_random_uuid(),
     room_name text,
     image_url text not null,
     creator text,
@@ -274,13 +420,27 @@ where report.reporter_id is null and lower(report.reporter) = lower(profile.nick
 update public.reports as report set target_user_id = profile.id
 from public.profiles as profile
 where report.target_user_id is null and lower(report.target_user) = lower(profile.nickname);
+update public.artworks as artwork set room_id = room.id
+from public.workspace_rooms as room
+where artwork.room_id is null and artwork.room_name = room.name;
 
 drop view if exists public.public_profiles;
-create view public.public_profiles with (security_barrier = true) as
-select id, nickname from public.profiles
-where not coalesce(is_banned, false) and (banned_until is null or banned_until <= now());
-revoke all on public.public_profiles from public, anon;
-grant select on public.public_profiles to authenticated;
+
+create or replace function public.find_canvas_profile_by_nickname(p_nickname text)
+returns table (id uuid, nickname text)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+    select profile.id, profile.nickname
+    from public.profiles as profile
+    where private.is_active_user()
+      and not coalesce(profile.is_banned, false)
+      and (profile.banned_until is null or profile.banned_until <= now())
+      and lower(profile.nickname) = lower(btrim(p_nickname))
+    limit 1;
+$$;
 
 do $$
 declare policy_record record;
@@ -288,7 +448,7 @@ begin
     for policy_record in
         select tablename, policyname from pg_policies
         where schemaname = 'public'
-          and tablename = any (array['profiles','system_settings','community_posts','community_comments','reports','artworks','workspace_rooms','workspace_room_members'])
+          and tablename = any (array['profiles','system_settings','community_posts','community_comments','reports','artworks','rooms','workspace_rooms','workspace_room_members'])
     loop
         execute format('drop policy if exists %I on public.%I', policy_record.policyname, policy_record.tablename);
     end loop;
@@ -302,6 +462,13 @@ alter table public.reports enable row level security;
 alter table public.artworks enable row level security;
 alter table public.workspace_rooms enable row level security;
 alter table public.workspace_room_members enable row level security;
+do $$
+begin
+    if to_regclass('public.rooms') is not null then
+        execute 'alter table public.rooms enable row level security';
+        execute 'revoke all on public.rooms from public, anon, authenticated';
+    end if;
+end $$;
 
 create policy profiles_read_self_or_admin on public.profiles for select to authenticated
 using (id = (select auth.uid()) or private.is_admin());
@@ -360,17 +527,6 @@ grant update (nickname) on public.profiles to authenticated;
 grant select, insert, update on public.system_settings to authenticated;
 grant select, insert, update, delete on public.community_posts, public.community_comments to authenticated;
 grant select, insert, update, delete on public.reports, public.artworks to authenticated;
-do $$
-declare
-    table_name text;
-    sequence_name text;
-begin
-    foreach table_name in array array['community_posts', 'community_comments', 'reports', 'artworks']
-    loop
-        sequence_name := pg_get_serial_sequence('public.' || table_name, 'id');
-        if sequence_name is not null then execute format('grant usage, select on sequence %s to authenticated', sequence_name); end if;
-    end loop;
-end $$;
 
 create or replace function public.list_workspace_rooms()
 returns table (id uuid, name text, created_by uuid, creator_nickname text, is_private boolean, created_at timestamptz)
@@ -415,10 +571,10 @@ declare
 begin
     if not private.is_active_user() then raise exception 'account is not active'; end if;
     if char_length(btrim(coalesce(p_name, ''))) not between 1 and 60 then raise exception 'invalid room name'; end if;
-    if p_password is not null and char_length(p_password) < 4 then raise exception 'room password must have at least 4 characters'; end if;
+    if p_password is not null and char_length(p_password) not between 4 and 128 then raise exception 'room password must have 4 to 128 characters'; end if;
     select profile.nickname into nickname_value from public.profiles as profile where profile.id = (select auth.uid());
     insert into public.workspace_rooms (name, created_by, creator_nickname, is_private, password_hash)
-    values (btrim(p_name), (select auth.uid()), nickname_value, p_password is not null, case when p_password is null then null else crypt(p_password, gen_salt('bf')) end)
+    values (btrim(p_name), (select auth.uid()), nickname_value, p_password is not null, case when p_password is null then null else extensions.crypt(p_password, extensions.gen_salt('bf')) end)
     returning * into new_room;
     insert into public.workspace_room_members (room_id, user_id, nickname)
     values (new_room.id, (select auth.uid()), nickname_value);
@@ -439,8 +595,9 @@ begin
     if not private.is_active_user() then raise exception 'account is not active'; end if;
     select * into selected_room from public.workspace_rooms where workspace_rooms.id = p_room_id and active;
     if not found then raise exception 'room not found'; end if;
+    if p_password is not null and char_length(p_password) > 128 then raise exception 'invalid room password'; end if;
     if selected_room.is_private and selected_room.created_by <> (select auth.uid()) and not private.is_admin()
-       and (p_password is null or selected_room.password_hash <> crypt(p_password, selected_room.password_hash)) then
+       and (p_password is null or selected_room.password_hash <> extensions.crypt(p_password, selected_room.password_hash)) then
         raise exception 'invalid room password';
     end if;
     select profile.nickname into nickname_value from public.profiles as profile where profile.id = (select auth.uid());
@@ -480,8 +637,8 @@ set search_path = ''
 as $$
 begin
     if not exists (select 1 from public.workspace_rooms where id = p_room_id and (created_by = (select auth.uid()) or private.is_admin())) then raise exception 'room owner permission required'; end if;
-    if p_password is not null and char_length(p_password) < 4 then raise exception 'room password must have at least 4 characters'; end if;
-    update public.workspace_rooms set is_private = p_password is not null, password_hash = case when p_password is null then null else crypt(p_password, gen_salt('bf')) end where id = p_room_id;
+    if p_password is not null and char_length(p_password) not between 4 and 128 then raise exception 'room password must have 4 to 128 characters'; end if;
+    update public.workspace_rooms set is_private = p_password is not null, password_hash = case when p_password is null then null else extensions.crypt(p_password, extensions.gen_salt('bf')) end where id = p_room_id;
 end;
 $$;
 
@@ -560,6 +717,7 @@ revoke all on function public.kick_workspace_member(uuid, uuid) from public, ano
 revoke all on function public.broadcast_workspace_timer(uuid, text) from public, anon;
 revoke all on function public.broadcast_workspace_chat(uuid, text) from public, anon;
 revoke all on function public.set_workspace_user_ban(uuid, boolean, timestamptz) from public, anon;
+revoke all on function public.find_canvas_profile_by_nickname(text) from public, anon;
 grant execute on function public.list_workspace_rooms() to authenticated;
 grant execute on function public.list_workspace_room_members(uuid) to authenticated;
 grant execute on function public.create_workspace_room(text, text) to authenticated;
@@ -571,6 +729,7 @@ grant execute on function public.kick_workspace_member(uuid, uuid) to authentica
 grant execute on function public.broadcast_workspace_timer(uuid, text) to authenticated;
 grant execute on function public.broadcast_workspace_chat(uuid, text) to authenticated;
 grant execute on function public.set_workspace_user_ban(uuid, boolean, timestamptz) to authenticated;
+grant execute on function public.find_canvas_profile_by_nickname(text) to authenticated;
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('canvas-artworks', 'canvas-artworks', true, 10485760, array['image/png'])
@@ -582,7 +741,11 @@ begin
     for policy_record in
         select policyname from pg_policies
         where schemaname = 'storage' and tablename = 'objects'
-          and (coalesce(qual, '') ilike '%canvas-artworks%' or coalesce(with_check, '') ilike '%canvas-artworks%')
+          and (
+              coalesce(qual, '') ilike '%artworks%'
+              or coalesce(with_check, '') ilike '%artworks%'
+              or policyname in ('public_read_artworks', 'public_upload_artworks')
+          )
     loop
         execute format('drop policy if exists %I on storage.objects', policy_record.policyname);
     end loop;
@@ -598,8 +761,11 @@ drop policy if exists canvas_realtime_read on realtime.messages;
 drop policy if exists canvas_realtime_send on realtime.messages;
 create policy canvas_realtime_read on realtime.messages for select to authenticated
 using (
-    (select realtime.topic()) = 'system:global'
-    or private.is_room_member(private.topic_room_id((select realtime.topic())))
+    private.is_active_user()
+    and (
+        (select realtime.topic()) = 'system:global'
+        or private.is_room_member(private.topic_room_id((select realtime.topic())))
+    )
 );
 create policy canvas_realtime_send on realtime.messages for insert to authenticated
 with check (
@@ -611,8 +777,7 @@ with check (
     )
 );
 
--- After this migration:
--- 1. Set the owner's role once: update public.profiles set role = 'admin' where id = '<OWNER USER UUID>';
--- 2. In Realtime Settings, turn off "Allow public access" so private-channel policies are enforced.
+-- After this migration, turn off "Allow public access" in Realtime Settings
+-- so private-channel policies are enforced.
 
 commit;

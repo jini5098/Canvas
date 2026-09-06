@@ -23,11 +23,13 @@
 
 프런트엔드와 데이터베이스 마이그레이션은 한 세트입니다. 오래된 데이터베이스 상태에서 새 프런트엔드만 먼저 배포하지 마세요.
 
-1. Supabase SQL Editor에서 `supabase/migrations/202609060001_secure_workspace.sql`을 실행합니다.
+1. Supabase SQL Editor에서 `supabase/migrations`의 SQL 파일을 번호 순서대로 실행합니다.
 2. `profiles`에서 사이트 소유자 계정 한 명의 `role`을 `admin`으로 지정합니다.
 3. Supabase **Realtime Settings**에서 **Allow public access**를 끕니다.
 4. Authentication의 Site URL과 Redirect URL에 실제 GitHub Pages 주소를 등록합니다.
 5. `npm test`가 모두 통과하는지 확인한 다음 GitHub에 배포합니다.
+
+마이그레이션은 기존 행을 삭제하지 않습니다. 적용 직전 자료는 접근이 잠긴 `canvas_backup_20260906` 스키마에 보관하며, 예전 방 비밀번호는 원문이 아닌 bcrypt 해시로만 백업·이전됩니다. 기존 `rooms` 테이블은 이전 뒤 모든 클라이언트 권한이 제거됩니다.
 
 구체적인 확인 순서는 [DEPLOYMENT_CHECKLIST.md](./DEPLOYMENT_CHECKLIST.md)를 따르세요.
 

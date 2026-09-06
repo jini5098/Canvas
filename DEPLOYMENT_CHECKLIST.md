@@ -3,7 +3,7 @@
 ## 1. 데이터베이스
 
 - [ ] Supabase 프로젝트를 백업하거나 복구 지점을 확인했다.
-- [ ] `supabase/migrations/202609060001_secure_workspace.sql` 전체를 실행했다.
+- [ ] `supabase/migrations`의 SQL 파일을 번호 순서대로 전부 실행했다.
 - [ ] SQL 실행 결과에 오류가 없다.
 - [ ] 기존 회원에게 `profiles` 행이 만들어졌는지 확인했다.
 - [ ] 소유자 UUID를 확인해 아래 명령을 **한 번만** 실행했다.

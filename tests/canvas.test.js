@@ -8,6 +8,7 @@ const vm = require('node:vm');
 const root = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const migration = fs.readFileSync(path.join(root, 'supabase/migrations/202609060001_secure_workspace.sql'), 'utf8');
+const hardeningMigration = fs.readFileSync(path.join(root, 'supabase/migrations/202609060002_harden_canvas_runtime.sql'), 'utf8');
 
 function inlineProgram() {
   const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].map((match) => match[1]);
@@ -57,7 +58,7 @@ test('manifest and service worker are scoped to the project folder', () => {
 test('database migration hashes passwords and enforces private channels', () => {
   assert.match(migration, /\nbegin;\s*\n/i);
   assert.match(migration, /commit;\s*$/i);
-  assert.match(migration, /crypt\(p_password, gen_salt\('bf'\)\)/);
+  assert.match(migration, /extensions\.crypt\(p_password, extensions\.gen_salt\('bf'\)\)/);
   assert.doesNotMatch(migration, /workspace_rooms[\s\S]{0,500}\bpassword\s+text/i);
   assert.match(migration, /alter table public\.profiles enable row level security/i);
   assert.match(migration, /private\.is_room_member/i);
@@ -65,6 +66,22 @@ test('database migration hashes passwords and enforces private channels', () => 
   assert.match(migration, /room-server:/);
   assert.match(migration, /canvas-artworks/);
   assert.match(migration, /nickname ~ '\^\[가-힣A-Za-z0-9_.-\]\{2,20\}\$'/);
+  assert.match(migration, /create schema if not exists canvas_backup_20260906/i);
+  assert.match(migration, /update public\.rooms set password = null/i);
+  assert.match(migration, /tablename = any \(array\[[^\]]*'rooms'/i);
+  assert.match(migration, /revoke all on public\.rooms from public, anon, authenticated/i);
+  assert.match(migration, /public_upload_artworks/);
+  assert.match(migration, /extensions\.crypt\(/);
+  assert.match(migration, /find_canvas_profile_by_nickname/);
+  assert.match(migration, /function private\.sync_canvas_nickname/);
+  assert.doesNotMatch(migration, /create view public\.public_profiles/i);
+  assert.doesNotMatch(migration, /function public\.handle_new_canvas_user/i);
+  assert.doesNotMatch(html, /from\(\s*['"]public_profiles['"]\s*\)/);
+  assert.match(html, /rpc\('find_canvas_profile_by_nickname'/);
+  assert.match(hardeningMigration, /workspace_rooms_created_by_idx/);
+  assert.equal((hardeningMigration.match(/private\.is_active_user\(\)/g) || []).length, 4);
+  assert.match(hardeningMigration, /extensions\.crypt\(p_password, extensions\.gen_salt\('bf'\)\)/);
+  assert.match(hardeningMigration, /commit;\s*$/i);
 });
 
 test('canvas helpers clamp input and wait for every sync chunk', () => {
