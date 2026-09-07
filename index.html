@@ -440,6 +440,8 @@
     <script>
         const SUPABASE_URL = 'https://uxaqxpzmmbjsxfrlvbtg.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_rczFp1BPtv9cwgL4aH5jow_PwXZyI0s';
+        // Capture recovery before the Auth SDK consumes and clears the URL fragment.
+        const recoveryRequested = /(?:^|[&#])type=recovery(?:&|$)/.test(window.location?.hash || '');
         const client = window.supabase?.createClient ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
         const GlobalState = {
@@ -481,6 +483,7 @@
         };
 
         const AuthController = {
+            isPasswordRecovery: recoveryRequested,
             bindEvents: () => {
                 document.getElementById('showSignupBtn').addEventListener('click', () => ViewToggle.switchAuthForm('signup'));
                 document.getElementById('showLoginBtn').addEventListener('click', () => ViewToggle.switchAuthForm('login'));
@@ -490,6 +493,12 @@
                 document.getElementById('doLoginBtn').addEventListener('click', AuthController.handleSignIn);
                 document.getElementById('doGuestLoginBtn').addEventListener('click', AuthController.handleGuestLogin);
                 document.getElementById('logoutBtn').addEventListener('click', AuthController.handleSignOut);
+                client?.auth.onAuthStateChange((event) => {
+                    if (event === 'PASSWORD_RECOVERY') {
+                        AuthController.isPasswordRecovery = true;
+                        ViewToggle.showScreen('auth'); ViewToggle.switchAuthForm('updatePw');
+                    }
+                });
             },
             handleGuestLogin: () => {
                 const guestId = Math.floor(Math.random() * 9000) + 1000;
@@ -498,7 +507,7 @@
             },
             handleSignUp: async () => {
                 if (!requireOnlineClient()) return;
-                const email = document.getElementById('signupEmail').value.trim(); const password = document.getElementById('signupPw').value.trim(); const nickname = document.getElementById('signupNick').value.trim();
+                const email = document.getElementById('signupEmail').value.trim(); const password = document.getElementById('signupPw').value; const nickname = document.getElementById('signupNick').value.trim();
                 if (!email || !password || !nickname) return alert("항목을 모두 채워주세요.");
                 if (password.length < 8) return alert("비밀번호는 8자 이상으로 만들어주세요.");
                 if (!/^[가-힣A-Za-z0-9_.-]{2,20}$/.test(nickname)) return alert("닉네임은 한글·영문·숫자 중심으로 2~20자 사이로 입력해주세요.");
@@ -510,7 +519,7 @@
             },
             handleSignIn: async () => {
                 if (!requireOnlineClient()) return;
-                const email = document.getElementById('loginEmail').value.trim(); const password = document.getElementById('loginPw').value.trim();
+                const email = document.getElementById('loginEmail').value.trim(); const password = document.getElementById('loginPw').value;
                 const { data, error } = await client.auth.signInWithPassword({ email, password });
                 if (error) return reportError("로그인 실패", error);
                 await AuthController.enterAuthenticatedSession(data.session);
@@ -535,9 +544,9 @@
             },
             restoreSession: async () => {
                 if (!client) { document.getElementById('offlineNotice').classList.remove('hidden'); ViewToggle.showScreen('auth'); return; }
-                if (window.location.hash.includes('type=recovery')) { ViewToggle.switchAuthForm('updatePw'); return; }
                 const { data, error } = await client.auth.getSession();
                 if (error) return reportError("로그인 상태 확인 실패", error);
+                if (AuthController.isPasswordRecovery && data.session) { ViewToggle.showScreen('auth'); ViewToggle.switchAuthForm('updatePw'); return; }
                 if (data.session) await AuthController.enterAuthenticatedSession(data.session); else ViewToggle.showScreen('auth');
             },
             handleResetPassword: async () => {
@@ -558,7 +567,7 @@
                 if (GlobalState.globalChannel) await client.removeChannel(GlobalState.globalChannel);
                 if (!GlobalState.user?.isGuest) { const { error } = await client.auth.signOut(); if (error) return reportError("로그아웃 실패", error); }
                 GlobalState.roomChannel = null; GlobalState.serverChannel = null; GlobalState.globalChannel = null; clearTimeout(WorkspaceSyncEngine.syncDebounce); WorkspaceSyncEngine.syncDebounce = null; GlobalState.syncChunks.forEach(entry => clearTimeout(entry.timer)); GlobalState.syncChunks.clear(); WorkspaceSyncEngine.stopTimer();
-                GlobalState.user = null; GlobalState.currentRoom = null; GlobalState.isAdmin = false; GlobalState.roomParticipants.clear();
+                GlobalState.user = null; GlobalState.currentRoom = null; GlobalState.isAdmin = false; GlobalState.roomParticipants.clear(); AuthController.isPasswordRecovery = false;
                 document.getElementById('profileModal').classList.add('hidden'); ViewToggle.switchAuthForm('login'); ViewToggle.showScreen('auth');
             }
         };
@@ -1023,6 +1032,7 @@
 
             broadcastCanvasState: async (targetUserId = null) => {
                 if (!GlobalState.roomChannel || GlobalState.currentRoom?.isLocal) return;
+                const channel = GlobalState.roomChannel; const room = GlobalState.currentRoom; const senderId = GlobalState.user.id;
                 let dataUrl; const background = document.getElementById('bgTemplate').value;
                 try {
                     dataUrl = WorkspaceSyncEngine.canvas.toDataURL('image/webp', 0.92);
@@ -1032,8 +1042,8 @@
                 const sendState = async () => {
                     const chunkSize = 32 * 1024; const total = Math.ceil(dataUrl.length / chunkSize); const transferId = crypto.randomUUID();
                     for (let index = 0; index < total; index += 1) {
-                        if (!GlobalState.roomChannel || GlobalState.currentRoom?.isLocal) return;
-                        const status = await GlobalState.roomChannel.send({ type: 'broadcast', event: 'sync_chunk', payload: { transferId, index, total, chunk: dataUrl.slice(index * chunkSize, (index + 1) * chunkSize), background, targetUserId, senderId: GlobalState.user.id } });
+                        if (GlobalState.roomChannel !== channel || GlobalState.currentRoom !== room || GlobalState.user?.id !== senderId) return;
+                        const status = await channel.send({ type: 'broadcast', event: 'sync_chunk', payload: { transferId, index, total, chunk: dataUrl.slice(index * chunkSize, (index + 1) * chunkSize), background, targetUserId, senderId } });
                         if (status !== 'ok') throw new Error(`조각 ${index + 1}/${total} 전송 실패`);
                     }
                 };
@@ -1042,23 +1052,28 @@
             },
             scheduleCanvasStateSync: (delay = 700) => { clearTimeout(WorkspaceSyncEngine.syncDebounce); WorkspaceSyncEngine.syncDebounce = setTimeout(() => WorkspaceSyncEngine.broadcastCanvasState(), delay); },
             receiveCanvasChunk: (payload) => {
+                const room = GlobalState.currentRoom; const userId = GlobalState.user?.id;
+                if (!room || room.isLocal || !userId) return;
                 const transferId = String(payload?.transferId || ''); const senderId = String(payload?.senderId || ''); const targetUserId = payload?.targetUserId ? String(payload.targetUserId) : null;
                 const index = Number(payload?.index); const total = Number(payload?.total); const chunk = payload?.chunk;
-                if (targetUserId && targetUserId !== GlobalState.user.id) return;
+                if (targetUserId && targetUserId !== userId) return;
                 if (!WorkspaceSyncEngine.isUuid(transferId) || !WorkspaceSyncEngine.isUuid(senderId) || !Number.isInteger(index) || !Number.isInteger(total) || total < 1 || total > 192 || index < 0 || index >= total || typeof chunk !== 'string' || chunk.length > 40 * 1024) return;
                 if (!GlobalState.syncChunks.has(transferId)) {
                     if (GlobalState.syncChunks.size >= 8) return;
                     const background = ['none', 'grid', 'blueprint', 'blackboard'].includes(payload?.background) ? payload.background : 'none';
-                    const entry = { chunks: new Array(total), total, received: 0, size: 0, background, timer: null };
+                    const entry = { chunks: new Array(total), total, received: 0, size: 0, background, senderId, targetUserId, room, timer: null };
                     entry.timer = setTimeout(() => GlobalState.syncChunks.delete(transferId), 15000); GlobalState.syncChunks.set(transferId, entry);
                 }
-                const entry = GlobalState.syncChunks.get(transferId); if (!entry || entry.total !== total || entry.chunks[index]) return;
+                const entry = GlobalState.syncChunks.get(transferId); if (!entry || entry.total !== total || entry.senderId !== senderId || entry.targetUserId !== targetUserId || entry.room !== room || entry.chunks[index] !== undefined) return;
                 entry.chunks[index] = chunk; entry.received += 1; entry.size += chunk.length;
                 if (entry.size > 6 * 1024 * 1024) { clearTimeout(entry.timer); GlobalState.syncChunks.delete(transferId); return; }
                 if (entry.received === total) {
                     clearTimeout(entry.timer); GlobalState.syncChunks.delete(transferId); const dataUrl = entry.chunks.join('');
                     if (!/^data:image\/(?:webp|png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(dataUrl)) return;
-                    const img = new Image(); img.onload = () => { WorkspaceSyncEngine.clearCanvasLocal(); WorkspaceSyncEngine.ctx.drawImage(img, 0, 0, WorkspaceSyncEngine.canvas.width, WorkspaceSyncEngine.canvas.height); WorkspaceSyncEngine.applyCanvasBackground(entry.background); }; img.src = dataUrl;
+                    const img = new Image(); img.onload = () => {
+                        if (GlobalState.currentRoom !== room || GlobalState.user?.id !== userId) return;
+                        WorkspaceSyncEngine.clearCanvasLocal(); WorkspaceSyncEngine.ctx.drawImage(img, 0, 0, WorkspaceSyncEngine.canvas.width, WorkspaceSyncEngine.canvas.height); WorkspaceSyncEngine.applyCanvasBackground(entry.background);
+                    }; img.src = dataUrl;
                 }
             },
 

@@ -17,6 +17,18 @@ function inlineProgram() {
   return source;
 }
 
+function canvasRuntime({ client = {}, hash = '', ImageClass = class {}, elements = {} } = {}) {
+  const context = {
+    window: { location: { hash }, supabase: { createClient: () => client } },
+    document: { getElementById: (id) => elements[id] },
+    console, URL, crypto: crypto.webcrypto, Image: ImageClass,
+    setTimeout, clearTimeout, setInterval, clearInterval, alert: () => {},
+  };
+  vm.createContext(context);
+  new vm.Script(`${inlineProgram()}\n;globalThis.__canvasTest = { AuthController, ViewToggle, WorkspaceSyncEngine, GlobalState };`).runInContext(context);
+  return { ...context.__canvasTest, window: context.window };
+}
+
 test('main JavaScript parses', () => {
   assert.doesNotThrow(() => new vm.Script(inlineProgram(), { filename: 'index-inline.js' }));
 });
@@ -51,8 +63,28 @@ test('manifest and service worker are scoped to the project folder', () => {
   assert.equal(manifest.start_url, './');
   assert.equal(manifest.scope, './');
   const worker = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-  assert.match(worker, /canvas-shell-v3/);
+  assert.match(worker, /canvas-shell-v4/);
   assert.match(worker, /url\.origin !== self\.location\.origin/);
+});
+
+test('service worker removes only obsolete Canvas caches', async () => {
+  const handlers = {}; const removed = []; const pending = [];
+  const context = {
+    URL,
+    self: { location: { href: 'https://jini5098.github.io/Canvas/sw.js', origin: 'https://jini5098.github.io' }, clients: { claim() {} }, addEventListener: (type, handler) => { handlers[type] = handler; } },
+    caches: { keys: async () => ['canvas-shell-v3', 'canvas-shell-v4', 'ted-cache-v1', 'other-site'], delete: async (key) => { removed.push(key); } },
+  };
+  vm.runInNewContext(fs.readFileSync(path.join(root, 'sw.js'), 'utf8'), context);
+  handlers.activate({ waitUntil: (promise) => pending.push(promise) });
+  await Promise.all(pending);
+  assert.deepEqual(removed, ['canvas-shell-v3']);
+});
+
+test('service worker does not intercept another app on the same origin', () => {
+  const handlers = {};
+  const context = { URL, self: { location: { href: 'https://jini5098.github.io/Canvas/sw.js', origin: 'https://jini5098.github.io' }, addEventListener: (type, handler) => { handlers[type] = handler; } } };
+  vm.runInNewContext(fs.readFileSync(path.join(root, 'sw.js'), 'utf8'), context);
+  handlers.fetch({ request: { method: 'GET', url: 'https://jini5098.github.io/TED/index.html' }, respondWith: () => assert.fail('TED must remain outside the Canvas cache') });
 });
 
 test('database migration hashes passwords and enforces private channels', () => {
@@ -115,6 +147,7 @@ test('canvas helpers clamp input and wait for every sync chunk', () => {
   engine.ctx = { clearRect: () => { cleared += 1; }, drawImage: () => { drawn += 1; } };
   engine.applyCanvasBackground = () => {};
   state.user = { id: '11111111-1111-4111-8111-111111111111' };
+  state.currentRoom = { id: 'test-room' };
 
   assert.deepEqual({ ...engine.clampPoint(-20, 900) }, { x: 0, y: 700 });
   assert.equal(engine.safeColor('#aabbcc'), '#aabbcc');
@@ -129,4 +162,80 @@ test('canvas helpers clamp input and wait for every sync chunk', () => {
   assert.equal(cleared, 1);
   assert.equal(drawn, 1);
   assert.equal(state.syncChunks.size, 0);
+});
+
+test('sign in and sign up preserve every password character', async () => {
+  const received = [];
+  const client = { auth: {
+    signInWithPassword: async (args) => { received.push(args); return { data: { session: {} }, error: null }; },
+    signUp: async (args) => { received.push(args); return { data: { session: {} }, error: null }; },
+  } };
+  const password = '  sample password  ';
+  const elements = Object.fromEntries(Object.entries({ loginEmail: ' test@example.com ', loginPw: password, signupEmail: ' test@example.com ', signupPw: password, signupNick: '테스트' }).map(([id, value]) => [id, { value }]));
+  const { AuthController: auth, window } = canvasRuntime({ client, elements });
+  window.location.href = 'https://jini5098.github.io/Canvas/';
+  auth.enterAuthenticatedSession = async () => {};
+  await auth.handleSignIn();
+  await auth.handleSignUp();
+  assert.equal(received.length, 2);
+  for (const args of received) { assert.equal(args.password, password); assert.equal(args.email, 'test@example.com'); }
+});
+
+test('password recovery survives the Auth SDK clearing the URL fragment', async () => {
+  const client = { auth: { getSession: async () => ({ data: { session: { user: { id: 'test-user' } } }, error: null }) } };
+  const { AuthController: auth, ViewToggle: view, window } = canvasRuntime({ client, hash: '#access_token=test&type=recovery' });
+  window.location.hash = '';
+  const screens = [];
+  view.showScreen = (name) => screens.push(name);
+  view.switchAuthForm = (name) => screens.push(name);
+  auth.enterAuthenticatedSession = async () => assert.fail('recovery must not enter the lobby');
+  await auth.restoreSession();
+  assert.deepEqual(screens, ['auth', 'updatePw']);
+});
+
+test('queued canvas images cannot be sent into a different room', async () => {
+  const { WorkspaceSyncEngine: engine, GlobalState: state } = canvasRuntime({ elements: { bgTemplate: { value: 'none' } } });
+  const first = []; const second = [];
+  const roomA = { id: 'room-a' };
+  state.user = { id: '11111111-1111-4111-8111-111111111111' };
+  state.currentRoom = roomA;
+  state.roomChannel = { send: async (message) => { first.push(message); return 'ok'; } };
+  engine.canvas = { toDataURL: () => 'data:image/png;base64,AA==' };
+  let release;
+  engine.syncQueue = new Promise((resolve) => { release = resolve; });
+  const queued = engine.broadcastCanvasState();
+  state.currentRoom = { id: 'room-b' };
+  state.roomChannel = { send: async (message) => { second.push(message); return 'ok'; } };
+  release(); await queued;
+  assert.equal(first.length, 0); assert.equal(second.length, 0);
+});
+
+test('an image decoded after leaving a room cannot overwrite the next canvas', () => {
+  const images = [];
+  class DelayedImage { constructor() { images.push(this); } set src(value) { this.value = value; } }
+  const { WorkspaceSyncEngine: engine, GlobalState: state } = canvasRuntime({ ImageClass: DelayedImage });
+  state.user = { id: '11111111-1111-4111-8111-111111111111' };
+  state.currentRoom = { id: 'room-a' };
+  engine.canvas = { width: 1100, height: 700 };
+  let draws = 0;
+  engine.clearCanvasLocal = () => { draws += 1; };
+  engine.ctx = { drawImage: () => { draws += 1; } };
+  engine.applyCanvasBackground = () => {};
+  engine.receiveCanvasChunk({ transferId: '22222222-2222-4222-8222-222222222222', senderId: '33333333-3333-4333-8333-333333333333', total: 1, index: 0, chunk: 'data:image/png;base64,AA==' });
+  assert.equal(images.length, 1);
+  state.currentRoom = { id: 'room-b' };
+  images[0].onload();
+  assert.equal(draws, 0);
+});
+
+test('sync chunks from different senders are never combined', () => {
+  const { WorkspaceSyncEngine: engine, GlobalState: state } = canvasRuntime();
+  state.user = { id: '11111111-1111-4111-8111-111111111111' };
+  state.currentRoom = { id: 'room-a' };
+  const base = { transferId: '22222222-2222-4222-8222-222222222222', senderId: '33333333-3333-4333-8333-333333333333', total: 2 };
+  engine.receiveCanvasChunk({ ...base, index: 0, chunk: 'data:image/png;base64,' });
+  engine.receiveCanvasChunk({ ...base, senderId: '44444444-4444-4444-8444-444444444444', index: 1, chunk: 'AA==' });
+  const transfer = state.syncChunks.get(base.transferId);
+  assert.equal(transfer.received, 1);
+  clearTimeout(transfer.timer);
 });
