@@ -1,0 +1,12 @@
+{
+  "name": "canvas-live-workspace",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Security and regression checks for Canvas Live Workspace",
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
