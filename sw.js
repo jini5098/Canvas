@@ -1,4 +1,4 @@
-const CACHE_NAME = "canvas-shell-v4";
+const CACHE_NAME = "canvas-shell-v5";
 const APP_SCOPE = new URL("./", self.location.href);
 const APP_SHELL = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
 

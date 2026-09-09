@@ -144,8 +144,10 @@
                 <div style="margin: 16px 0; display: flex; align-items: center; text-align: center; color: var(--color-text-muted);">
                     <hr style="flex:1; border:0; border-top:1px solid var(--color-border);"><span style="padding: 0 10px; font-size: 12px; font-weight: bold;">또는</span><hr style="flex:1; border:0; border-top:1px solid var(--color-border);">
                 </div>
-                <button class="btn-secondary" id="doGuestLoginBtn" style="width:100%;"><i class="fas fa-eye"></i> 게스트로 둘러보기 (그리기 전용)</button>
-                <p id="offlineNotice" class="hidden" role="status" style="margin:12px 0 0; color:var(--color-text-muted); font-size:12px; text-align:center;">오프라인 상태입니다. 게스트 로컬 캔버스는 사용할 수 있어요.</p>
+                <button class="btn-secondary" id="doGuestLoginBtn" style="width:100%;">게스트로 시작하기</button>
+                <p style="font-size:14px; color:var(--color-text-muted);">가입 없이 공개방에서 함께 그리고 채팅할 수 있어요.</p>
+                <button class="btn-secondary" id="doLocalCanvasBtn" style="width:100%;">혼자 그리기 · 오프라인 가능</button>
+                <p id="offlineNotice" class="hidden" role="status" style="margin:12px 0 0; color:var(--color-text-muted); font-size:14px; text-align:center;">온라인 연결이 없습니다. 혼자 그리기는 사용할 수 있어요.</p>
                 <div class="auth-toggle" id="doResetPwBtn" style="margin-top: 18px;">비밀번호를 잊으셨나요?</div>
                 <div class="auth-toggle" id="showSignupBtn">계정이 없으신가요? 회원가입</div>
             </div>
@@ -270,12 +272,17 @@
                 <div class="user-badge" id="userGreetingMsg" title="내 프로필 및 그림 보기">연결 중</div>
                 <button id="adminPanelBtn" class="btn-danger"><i class="fas fa-cog"></i> 관리자</button>
                 <button class="btn-secondary" id="btnQuickJoin"><i class="fas fa-random"></i> 빠른 입장</button>
+                <button class="btn-secondary" id="btnLocalCanvas">혼자 그리기</button>
                 <button class="btn-primary" id="showCreateRoomModalBtn" style="width: auto;"><i class="fas fa-plus"></i> 새 방 만들기</button>
             </div>
         </div>
 
         <div class="dashboard-grid">
             <div class="main-panel">
+                <div id="guestAccessNotice" class="hidden" style="margin-bottom:16px; padding:16px; background:var(--bg-surface); border:1px solid var(--color-border); border-radius:12px; font-size:14px; line-height:1.6;">
+                    공개방과 채팅을 자유롭게 이용하세요. 그림 보관함·글쓰기·방 생성·비공개방은 회원 로그인 후 사용할 수 있어요.
+                    <button id="guestAccountBtn" class="btn-secondary" style="margin-top:8px;">로그인 / 회원가입</button>
+                </div>
                 <div class="event-banner" id="summerEventBanner">🌊 여름 특별 이벤트가 진행 중입니다! 시원한 썸머 테마와 특별 브러시를 사용해보세요! 🏄‍♂️</div>
 
                 <div class="lobby-tabs">
@@ -466,7 +473,10 @@
             if (GlobalState.isAdmin) target.append(createTextElement('span', '관리자', 'admin-badge'));
         };
         const reportError = (label, error) => { console.error(label, error); alert(`${label}: ${error?.message || error || '알 수 없는 오류'}`); };
-        const requireOnlineClient = () => { if (client) return true; alert('온라인 기능을 불러오지 못했습니다. 인터넷 연결을 확인하거나 게스트 캔버스를 이용해주세요.'); return false; };
+        const requireOnlineClient = () => { if (client) return true; alert('온라인 기능을 불러오지 못했습니다. 인터넷 연결을 확인하거나 혼자 그리기를 이용해주세요.'); return false; };
+        const updateSaveButton = () => {
+            document.getElementById('saveBtn').textContent = GlobalState.user?.isGuest || GlobalState.currentRoom?.isLocal ? '이미지 다운로드' : '클라우드 저장';
+        };
 
         const rgbToHex = (r, g, b) => { return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).padStart(6, '0'); };
 
@@ -484,6 +494,7 @@
 
         const AuthController = {
             isPasswordRecovery: recoveryRequested,
+            isGuestLoginPending: false,
             bindEvents: () => {
                 document.getElementById('showSignupBtn').addEventListener('click', () => ViewToggle.switchAuthForm('signup'));
                 document.getElementById('showLoginBtn').addEventListener('click', () => ViewToggle.switchAuthForm('login'));
@@ -492,6 +503,8 @@
                 document.getElementById('doSignupBtn').addEventListener('click', AuthController.handleSignUp);
                 document.getElementById('doLoginBtn').addEventListener('click', AuthController.handleSignIn);
                 document.getElementById('doGuestLoginBtn').addEventListener('click', AuthController.handleGuestLogin);
+                document.getElementById('doLocalCanvasBtn').addEventListener('click', AuthController.handleLocalGuest);
+                document.getElementById('guestAccountBtn').addEventListener('click', AuthController.handleSignOut);
                 document.getElementById('logoutBtn').addEventListener('click', AuthController.handleSignOut);
                 client?.auth.onAuthStateChange((event) => {
                     if (event === 'PASSWORD_RECOVERY') {
@@ -500,10 +513,27 @@
                     }
                 });
             },
-            handleGuestLogin: () => {
-                const guestId = Math.floor(Math.random() * 9000) + 1000;
-                GlobalState.user = { id: `guest_${guestId}`, email: 'guest@local', nickname: `Guest_${guestId}`, isGuest: true };
-                GlobalState.isAdmin = false; setUserGreeting(); RoomController.startGuestCanvas();
+            handleGuestLogin: async () => {
+                if (AuthController.isGuestLoginPending || !requireOnlineClient()) return;
+                AuthController.isGuestLoginPending = true;
+                const button = document.getElementById('doGuestLoginBtn'); button.disabled = true; button.textContent = '게스트로 연결 중...';
+                try {
+                    const current = await client.auth.getSession();
+                    if (current.error) throw current.error;
+                    const result = current.data.session ? current : await client.auth.signInAnonymously();
+                    if (result.error) throw result.error;
+                    if (!result.data.session) throw new Error('게스트 세션을 만들지 못했습니다.');
+                    await AuthController.enterAuthenticatedSession(result.data.session);
+                } catch (error) {
+                    reportError('게스트 연결 실패. 다시 시도하거나 혼자 그리기를 이용해주세요', error);
+                } finally {
+                    AuthController.isGuestLoginPending = false; button.disabled = false; button.textContent = '게스트로 시작하기';
+                }
+            },
+            handleLocalGuest: () => {
+                const guestId = crypto.randomUUID().slice(0, 8);
+                GlobalState.user = { id: `local_${guestId}`, nickname: `Guest_${guestId}`, isGuest: true, isLocalOnly: true };
+                GlobalState.isAdmin = false; setUserGreeting(); RoomController.startLocalCanvas();
             },
             handleSignUp: async () => {
                 if (!requireOnlineClient()) return;
@@ -533,8 +563,9 @@
                     await client.auth.signOut();
                     return alert(profile.is_banned ? "영구 차단된 계정입니다." : `이용 정지 상태입니다.\n정지 해제일: ${new Date(profile.banned_until).toLocaleString()}`);
                 }
-                GlobalState.user = { id: session.user.id, email: session.user.email, nickname: profile.nickname, isGuest: false };
-                GlobalState.isAdmin = profile.role === 'admin';
+                GlobalState.user = { id: session.user.id, email: session.user.email, nickname: profile.nickname, isGuest: session.user.is_anonymous === true, isLocalOnly: false };
+                GlobalState.isAdmin = !GlobalState.user.isGuest && profile.role === 'admin';
+                document.getElementById('guestAccessNotice').classList.toggle('hidden', !GlobalState.user.isGuest);
                 document.getElementById('adminPanelBtn').style.display = GlobalState.isAdmin ? 'inline-flex' : 'none';
                 document.getElementById('editNoticeBtn').classList.toggle('hidden', !GlobalState.isAdmin);
                 document.getElementById('editGuideBtn').classList.toggle('hidden', !GlobalState.isAdmin);
@@ -562,10 +593,11 @@
                 if (error) return reportError("변경 실패", error); alert("변경 완료! 다시 로그인해 주세요."); await AuthController.handleSignOut();
             },
             handleSignOut: async () => {
+                if (GlobalState.currentRoom && !GlobalState.currentRoom.isLocal && !GlobalState.user?.isLocalOnly) await client.rpc('leave_workspace_room', { p_room_id: GlobalState.currentRoom.id });
                 if (GlobalState.roomChannel) await client.removeChannel(GlobalState.roomChannel);
                 if (GlobalState.serverChannel) await client.removeChannel(GlobalState.serverChannel);
                 if (GlobalState.globalChannel) await client.removeChannel(GlobalState.globalChannel);
-                if (!GlobalState.user?.isGuest) { const { error } = await client.auth.signOut(); if (error) return reportError("로그아웃 실패", error); }
+                if (client && !GlobalState.user?.isLocalOnly) { const { error } = await client.auth.signOut(); if (error) return reportError("로그아웃 실패", error); }
                 GlobalState.roomChannel = null; GlobalState.serverChannel = null; GlobalState.globalChannel = null; clearTimeout(WorkspaceSyncEngine.syncDebounce); WorkspaceSyncEngine.syncDebounce = null; GlobalState.syncChunks.forEach(entry => clearTimeout(entry.timer)); GlobalState.syncChunks.clear(); WorkspaceSyncEngine.stopTimer();
                 GlobalState.user = null; GlobalState.currentRoom = null; GlobalState.isAdmin = false; GlobalState.roomParticipants.clear(); AuthController.isPasswordRecovery = false;
                 document.getElementById('profileModal').classList.add('hidden'); ViewToggle.switchAuthForm('login'); ViewToggle.showScreen('auth');
@@ -623,7 +655,7 @@
 
         const SystemConfigController = {
             initGlobalChannel: async () => {
-                if (GlobalState.user?.isGuest) return;
+                if (GlobalState.user?.isLocalOnly) return;
                 SystemConfigController.loadSettings(false);
                 if (GlobalState.globalChannel) await client.removeChannel(GlobalState.globalChannel);
                 await client.realtime.setAuth();
@@ -734,7 +766,7 @@
             deleteReport: async (id) => { if(!GlobalState.isAdmin) return; const { error } = await client.from('reports').delete().eq('id', id); if (error) return reportError("신고 종료 실패", error); SystemConfigController.loadAdminReportList(); },
 
             handleDirectReport: async () => {
-                if(GlobalState.user.isGuest) return alert("신고 기능은 정식 회원만 가능합니다.");
+                if(GlobalState.user.isLocalOnly) return alert("온라인 방에서 신고할 수 있습니다.");
                 const targetUser = prompt("신고할 대상의 닉네임을 정확히 입력해주세요:"); if(!targetUser || targetUser.trim() === '') return;
                 const reason = prompt(`[${targetUser}] 님을 신고하시는 사유를 입력해 주세요:\n(예: 욕설, 부적절한 그림 등)`); if(!reason || reason.trim() === '') return alert("신고 사유를 입력해야 접수됩니다.");
                 if (reason.trim().length > 2000) return alert('신고 사유는 2,000자 이내로 작성해주세요.');
@@ -797,6 +829,7 @@
                 else { document.getElementById('roomsTabSection').classList.add('hidden'); document.getElementById('communityTabSection').classList.remove('hidden'); CommunityController.loadPosts(); }
             },
             handleWritePost: async () => {
+                if (GlobalState.user?.isGuest) return alert('게시글 작성은 회원 로그인 후 사용할 수 있어요.');
                 const category = document.getElementById('postCategory').value; const title = document.getElementById('postTitle').value.trim(); const content = document.getElementById('postContent').value.trim();
                 if(!title || !content) return alert("제목과 내용을 기입해 주세요."); if (title.length > 100 || content.length > 5000) return alert("제목은 100자, 내용은 5,000자 이내로 작성해주세요."); const { error } = await client.from('community_posts').insert([{ category, title, content, author: GlobalState.user.nickname, author_id: GlobalState.user.id }]);
                 if(error) return alert("저장 실패: " + error.message); document.getElementById('postTitle').value = ''; document.getElementById('postContent').value = ''; document.getElementById('postModal').classList.add('hidden'); CommunityController.loadPosts();
@@ -835,22 +868,23 @@
                 document.getElementById('exitBtn').addEventListener('click', RoomController.handleExitRoom);
                 document.getElementById('togglePrivacyBtn').addEventListener('click', RoomController.handleTogglePrivacy);
                 document.getElementById('btnQuickJoin').addEventListener('click', RoomController.handleQuickJoin);
+                document.getElementById('btnLocalCanvas').addEventListener('click', RoomController.startLocalCanvas);
             },
-            startGuestCanvas: () => {
-                GlobalState.currentRoom = { id: 'local-demo', name: '게스트 체험 캔버스', isPrivate: true, ownerId: GlobalState.user.id, createdBy: GlobalState.user.nickname, isLocal: true };
+            startLocalCanvas: () => {
+                GlobalState.currentRoom = { id: 'local-demo', name: '혼자 그리기', isPrivate: true, ownerId: GlobalState.user.id, createdBy: GlobalState.user.nickname, isLocal: true };
                 GlobalState.roomParticipants.clear(); GlobalState.roomParticipants.set(GlobalState.user.id, GlobalState.user.nickname);
-                ViewToggle.showScreen('workspace'); document.getElementById('roomInfoDisplay').innerText = '[게스트 체험 캔버스]'; document.getElementById('togglePrivacyBtn').innerText = '로컬 전용'; document.getElementById('togglePrivacyBtn').disabled = true;
+                ViewToggle.showScreen('workspace'); document.getElementById('roomInfoDisplay').innerText = '[혼자 그리기]'; document.getElementById('togglePrivacyBtn').innerText = '로컬 전용'; document.getElementById('togglePrivacyBtn').disabled = true; updateSaveButton();
                 document.getElementById('chatInput').disabled = true; document.getElementById('chatSendBtn').disabled = true; document.getElementById('workspaceReportBtn').style.display = 'none';
                 clearElement(document.getElementById('chatMessages')); WorkspaceSyncEngine.clearCanvasLocal(); WorkspaceSyncEngine.updateParticipantsUI();
             },
             handleQuickJoin: async () => {
-                if (GlobalState.user.isGuest) return RoomController.startGuestCanvas();
+                if (GlobalState.user.isLocalOnly) return RoomController.startLocalCanvas();
                 const { data, error } = await client.rpc('list_workspace_rooms'); if (error) return reportError("방 목록 불러오기 실패", error);
                 const publicRooms = (data || []).filter(room => !room.is_private); if (!publicRooms.length) return alert("현재 입장 가능한 공개방이 없습니다. 새 방을 만들어보세요!");
                 const room = publicRooms[Math.floor(Math.random() * publicRooms.length)]; await RoomController.validateAndJoin(room);
             },
             loadActiveRooms: async () => {
-                if (GlobalState.user?.isGuest) return;
+                if (GlobalState.user?.isLocalOnly) return;
                 const container = document.getElementById('roomListContainer'); clearElement(container); container.append(createTextElement('div', '방 목록을 불러오는 중...'));
                 const { data, error } = await client.rpc('list_workspace_rooms'); clearElement(container); if (error) return reportError("방 목록 불러오기 실패", error);
                 if (!data || data.length === 0) return container.append(createTextElement('div', '현재 열려있는 방이 없습니다.'));
@@ -864,12 +898,14 @@
                 });
             },
             handleCreateRoom: async () => {
+                if (GlobalState.user?.isGuest) return alert('새 방 만들기는 회원 로그인 후 사용할 수 있어요.');
                 const name = document.getElementById('newRoomName').value.trim(); const password = document.getElementById('newRoomPw').value;
                 if (!name || name.length > 60) return alert("방 제목은 1~60자로 입력해주세요."); if (password && password.length < 4) return alert("방 비밀번호는 4자 이상으로 만들어주세요.");
                 const { data, error } = await client.rpc('create_workspace_room', { p_name: name, p_password: password || null }); if (error) return reportError("방 생성 실패", error);
                 const room = Array.isArray(data) ? data[0] : data; document.getElementById('newRoomName').value = ''; document.getElementById('newRoomPw').value = ''; document.getElementById('createRoomForm').classList.add('hidden'); await RoomController.executeJoinRoom(room);
             },
             validateAndJoin: async (room) => {
+                if (room.is_private && GlobalState.user?.isGuest) return alert('비공개방은 회원 로그인 후 입장할 수 있어요.');
                 const password = room.is_private ? prompt("비밀번호:") : null; if (room.is_private && password === null) return;
                 const { data, error } = await client.rpc('join_workspace_room', { p_room_id: room.id, p_password: password }); if (error) return alert(error.message.includes('invalid room password') ? '비밀번호가 맞지 않습니다.' : `입장 실패: ${error.message}`);
                 await RoomController.executeJoinRoom(Array.isArray(data) ? data[0] : data);
@@ -877,6 +913,7 @@
             executeJoinRoom: async (room) => {
                 if (!room) return alert("방 정보를 불러오지 못했습니다.");
                 GlobalState.currentRoom = { id: room.id, name: room.name, isPrivate: room.is_private, ownerId: room.created_by, createdBy: room.creator_nickname, isLocal: false }; GlobalState.roomParticipants.clear();
+                updateSaveButton();
                 ViewToggle.showScreen('workspace'); document.getElementById('roomInfoDisplay').innerText = `[${room.name}]`; document.getElementById('togglePrivacyBtn').innerText = room.is_private ? '비공개 🔒' : '공개 🟢'; document.getElementById('togglePrivacyBtn').disabled = !(room.created_by === GlobalState.user.id || GlobalState.isAdmin);
                 document.getElementById('chatInput').disabled = true; document.getElementById('chatSendBtn').disabled = true; document.getElementById('workspaceReportBtn').style.display = 'inline-flex'; clearElement(document.getElementById('chatMessages')); WorkspaceSyncEngine.clearCanvasLocal();
                 await WorkspaceSyncEngine.connectRealtimePipeline();
@@ -889,8 +926,8 @@
             },
             handleExitRoom: async () => {
                 const room = GlobalState.currentRoom; if (GlobalState.roomChannel) { await client.removeChannel(GlobalState.roomChannel); GlobalState.roomChannel = null; } if (GlobalState.serverChannel) { await client.removeChannel(GlobalState.serverChannel); GlobalState.serverChannel = null; }
-                if (room && !room.isLocal && !GlobalState.user?.isGuest) await client.rpc('leave_workspace_room', { p_room_id: room.id });
-                GlobalState.currentRoom = null; GlobalState.roomParticipants.clear(); ViewToggle.showScreen(GlobalState.user?.isGuest ? 'auth' : 'lobby'); if (!GlobalState.user?.isGuest) { RoomController.loadActiveRooms(); SystemConfigController.loadFeaturedArtwork(); }
+                if (room && !room.isLocal && !GlobalState.user?.isLocalOnly) await client.rpc('leave_workspace_room', { p_room_id: room.id });
+                GlobalState.currentRoom = null; GlobalState.roomParticipants.clear(); ViewToggle.showScreen(GlobalState.user?.isLocalOnly ? 'auth' : 'lobby'); if (!GlobalState.user?.isLocalOnly) { RoomController.loadActiveRooms(); SystemConfigController.loadFeaturedArtwork(); }
                 clearTimeout(WorkspaceSyncEngine.syncDebounce); WorkspaceSyncEngine.syncDebounce = null; GlobalState.syncChunks.forEach(entry => clearTimeout(entry.timer)); GlobalState.syncChunks.clear(); WorkspaceSyncEngine.clearCanvasLocal(); document.querySelectorAll('.live-cursor,.laser-pointer-dot').forEach(el => el.remove()); WorkspaceSyncEngine.undoStack = []; WorkspaceSyncEngine.redoStack = []; WorkspaceSyncEngine.stopTimer();
             },
             deleteRoom: async (id) => { if(!confirm("이 세션을 삭제하시겠습니까?")) return; const { error } = await client.rpc('delete_workspace_room', { p_room_id: id }); if (error) return reportError("방 삭제 실패", error); RoomController.loadActiveRooms(); },
@@ -1285,7 +1322,7 @@
             },
 
             connectRealtimePipeline: async () => {
-                if (!GlobalState.currentRoom || GlobalState.currentRoom.isLocal || GlobalState.user?.isGuest) return;
+                if (!GlobalState.currentRoom || GlobalState.currentRoom.isLocal || GlobalState.user?.isLocalOnly) return;
                 if (GlobalState.roomChannel) await client.removeChannel(GlobalState.roomChannel);
                 await client.realtime.setAuth(); const roomId = GlobalState.currentRoom.id;
                 const channel = client.channel(`room:${roomId}`, { config: { private: true, broadcast: { self: false, ack: true }, presence: { key: GlobalState.user.id } } }); GlobalState.roomChannel = channel;
@@ -1316,7 +1353,7 @@
                     });
                 const serverChannel = client.channel(`room-server:${roomId}`, { config: { private: true, broadcast: { self: false, ack: true } } }); GlobalState.serverChannel = serverChannel;
                 serverChannel
-                    .on('broadcast', { event: 'kick_user' }, (p) => { if(String(p.payload?.targetUserId) === GlobalState.user.id) { alert('방장에 의해 강퇴되었습니다.'); RoomController.handleExitRoom(); } })
+                    .on('broadcast', { event: 'kick_user' }, (p) => { if(String(p.payload?.targetUserId) === GlobalState.user.id) { alert(typeof p.payload.reason === 'string' ? p.payload.reason.slice(0, 300) : '방장에 의해 강퇴되었습니다.'); RoomController.handleExitRoom(); } })
                     .on('broadcast', { event: 'timer' }, (p) => { if(p.payload?.action === 'start') WorkspaceSyncEngine.startTimer(Math.max(1, Math.min(3600, Number(p.payload?.seconds) || 300))); else if (p.payload?.action === 'stop') WorkspaceSyncEngine.stopTimer(); })
                     .on('broadcast', { event: 'chat' }, (p) => { const d = p.payload || {}; WorkspaceSyncEngine.appendUserMsg(d.senderNickname, d.message, false, d.senderId); })
                     .subscribe((status) => { if (status === 'SUBSCRIBED') { document.getElementById('chatInput').disabled = false; document.getElementById('chatSendBtn').disabled = false; } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') WorkspaceSyncEngine.appendUserMsg('', '보안 메시지 채널 연결에 실패했습니다.', true); });
@@ -1353,7 +1390,7 @@
 
             handleCloudAndLocalSave: async () => {
                 const safeRoomName = String(GlobalState.currentRoom?.name || 'canvas').replace(/[^가-힣A-Za-z0-9_.-]+/g, '_').slice(0, 50) || 'canvas'; const exportCanvas = WorkspaceSyncEngine.getExportCanvas();
-                if (GlobalState.user.isGuest) { const a = document.createElement('a'); a.download = `export_${safeRoomName}.png`; a.href = exportCanvas.toDataURL('image/png'); a.click(); return alert("게스트는 로컬 다운로드만 지원됩니다."); }
+                if (GlobalState.user.isGuest || GlobalState.currentRoom.isLocal) { const a = document.createElement('a'); a.download = `export_${safeRoomName}.png`; a.href = exportCanvas.toDataURL('image/png'); a.click(); return; }
                 const saveBtn = document.getElementById('saveBtn'); saveBtn.disabled = true; saveBtn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> 저장 중...";
                 let storagePath = null;
                 try {

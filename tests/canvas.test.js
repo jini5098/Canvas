@@ -18,15 +18,17 @@ function inlineProgram() {
 }
 
 function canvasRuntime({ client = {}, hash = '', ImageClass = class {}, elements = {} } = {}) {
+  const alerts = [];
+  const element = () => ({ style: {}, value: '', classList: { add() {}, remove() {}, toggle() {} }, append() {}, addEventListener() {} });
   const context = {
     window: { location: { hash }, supabase: { createClient: () => client } },
-    document: { getElementById: (id) => elements[id] },
-    console, URL, crypto: crypto.webcrypto, Image: ImageClass,
-    setTimeout, clearTimeout, setInterval, clearInterval, alert: () => {},
+    document: { getElementById: (id) => elements[id] ||= element(), createElement: element, createTextNode: (text) => ({ textContent: text }), querySelectorAll: () => [] },
+    console: { ...console, error() {} }, URL, crypto: crypto.webcrypto, Image: ImageClass,
+    setTimeout, clearTimeout, setInterval, clearInterval, alert: (message) => alerts.push(message),
   };
   vm.createContext(context);
-  new vm.Script(`${inlineProgram()}\n;globalThis.__canvasTest = { AuthController, ViewToggle, WorkspaceSyncEngine, GlobalState };`).runInContext(context);
-  return { ...context.__canvasTest, window: context.window };
+  new vm.Script(`${inlineProgram()}\n;globalThis.__canvasTest = { AuthController, ViewToggle, WorkspaceSyncEngine, GlobalState, RoomController, SystemConfigController, CommunityController };`).runInContext(context);
+  return { ...context.__canvasTest, window: context.window, alerts, elements };
 }
 
 test('main JavaScript parses', () => {
@@ -63,7 +65,7 @@ test('manifest and service worker are scoped to the project folder', () => {
   assert.equal(manifest.start_url, './');
   assert.equal(manifest.scope, './');
   const worker = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-  assert.match(worker, /canvas-shell-v4/);
+  assert.match(worker, /canvas-shell-v5/);
   assert.match(worker, /url\.origin !== self\.location\.origin/);
 });
 
@@ -72,12 +74,12 @@ test('service worker removes only obsolete Canvas caches', async () => {
   const context = {
     URL,
     self: { location: { href: 'https://jini5098.github.io/Canvas/sw.js', origin: 'https://jini5098.github.io' }, clients: { claim() {} }, addEventListener: (type, handler) => { handlers[type] = handler; } },
-    caches: { keys: async () => ['canvas-shell-v3', 'canvas-shell-v4', 'ted-cache-v1', 'other-site'], delete: async (key) => { removed.push(key); } },
+    caches: { keys: async () => ['canvas-shell-v4', 'canvas-shell-v5', 'ted-cache-v1', 'other-site'], delete: async (key) => { removed.push(key); } },
   };
   vm.runInNewContext(fs.readFileSync(path.join(root, 'sw.js'), 'utf8'), context);
   handlers.activate({ waitUntil: (promise) => pending.push(promise) });
   await Promise.all(pending);
-  assert.deepEqual(removed, ['canvas-shell-v3']);
+  assert.deepEqual(removed, ['canvas-shell-v4']);
 });
 
 test('service worker does not intercept another app on the same origin', () => {
@@ -179,6 +181,104 @@ test('sign in and sign up preserve every password character', async () => {
   await auth.handleSignUp();
   assert.equal(received.length, 2);
   for (const args of received) { assert.equal(args.password, password); assert.equal(args.email, 'test@example.com'); }
+});
+
+test('guest entry creates one anonymous session and reuses it on the next visit', async () => {
+  let session = null; let created = 0; const entered = [];
+  const client = { auth: {
+    getSession: async () => ({ data: { session }, error: null }),
+    signInAnonymously: async () => {
+      created += 1; session = { user: { id: 'guest-uuid', is_anonymous: true } };
+      return { data: { session }, error: null };
+    },
+  } };
+  const { AuthController: auth, elements } = canvasRuntime({ client });
+  auth.enterAuthenticatedSession = async (value) => entered.push(value);
+  await auth.handleGuestLogin();
+  await auth.handleGuestLogin();
+  assert.equal(created, 1);
+  assert.deepEqual(entered, [session, session]);
+  assert.equal(elements.doGuestLoginBtn.disabled, false);
+});
+
+test('guest connection failures remain visible and do not silently open a local canvas', async () => {
+  const client = { auth: {
+    getSession: async () => ({ data: { session: null }, error: null }),
+    signInAnonymously: async () => ({ data: { session: null }, error: new Error('connection unavailable') }),
+  } };
+  const { AuthController: auth, RoomController: rooms, GlobalState: state, alerts, elements } = canvasRuntime({ client });
+  rooms.startLocalCanvas = () => assert.fail('online guest must not silently fall back to offline');
+  await auth.handleGuestLogin();
+  assert.equal(state.user, null);
+  assert.match(alerts[0], /게스트 연결 실패/);
+  assert.equal(elements.doGuestLoginBtn.disabled, false);
+});
+
+test('an anonymous session enters the online lobby with guest privileges even if a profile claims admin', async () => {
+  const profile = { id: 'guest-uuid', nickname: 'Guest_123', role: 'admin', is_banned: false };
+  const selection = { select() { return this; }, eq() { return this; }, async single() { return { data: profile, error: null }; } };
+  const runtime = canvasRuntime({ client: { from: () => selection } });
+  const calls = [];
+  runtime.ViewToggle.showScreen = (screen) => calls.push(screen);
+  runtime.RoomController.loadActiveRooms = async () => calls.push('rooms');
+  runtime.SystemConfigController.initGlobalChannel = () => calls.push('realtime');
+  runtime.SystemConfigController.loadFeaturedArtwork = () => {};
+  runtime.CommunityController.loadPosts = () => calls.push('posts');
+  await runtime.AuthController.enterAuthenticatedSession({ user: { id: profile.id, is_anonymous: true } });
+  assert.equal(runtime.GlobalState.user.isGuest, true);
+  assert.equal(runtime.GlobalState.user.isLocalOnly, false);
+  assert.equal(runtime.GlobalState.isAdmin, false);
+  assert.deepEqual(calls, ['lobby', 'rooms', 'realtime', 'posts']);
+});
+
+test('guests can quick-join a public room and subscribe to drawing and chat', async () => {
+  const subscriptions = []; const channels = [];
+  const client = {
+    rpc: async () => ({ data: [{ id: 'private-room', is_private: true }, { id: 'public-room', is_private: false }], error: null }),
+    realtime: { setAuth: async () => {} },
+    channel: (name, options) => {
+      channels.push({ name, private: options.config.private });
+      return { on() { return this; }, subscribe() { subscriptions.push(name); return this; } };
+    },
+  };
+  const { RoomController: rooms, WorkspaceSyncEngine: engine, GlobalState: state } = canvasRuntime({ client });
+  state.user = { id: 'guest-uuid', isGuest: true, isLocalOnly: false };
+  let joined;
+  rooms.validateAndJoin = async (room) => { joined = room.id; };
+  await rooms.handleQuickJoin();
+  assert.equal(joined, 'public-room');
+  state.currentRoom = { id: joined, isLocal: false };
+  await engine.connectRealtimePipeline();
+  assert.deepEqual(subscriptions, ['room:public-room', 'room-server:public-room']);
+  assert.ok(channels.every((channel) => channel.private));
+});
+
+test('member-only actions reject a guest before making account-owned writes', async () => {
+  const client = { rpc: () => assert.fail('restricted RPC must not be called'), from: () => assert.fail('restricted write must not be sent') };
+  const { RoomController: rooms, CommunityController: community, GlobalState: state, alerts } = canvasRuntime({ client });
+  state.user = { id: 'guest-uuid', isGuest: true, isLocalOnly: false };
+  await rooms.handleCreateRoom();
+  await rooms.validateAndJoin({ id: 'private-room', is_private: true });
+  await community.handleWritePost();
+  await community.handleAddComment();
+  assert.equal(alerts.length, 4);
+});
+
+test('leaving an online guest room releases membership, returns to lobby, and sign-out revokes the session', async () => {
+  const calls = [];
+  const client = { rpc: async (name) => { calls.push(name); return { error: null }; }, auth: { signOut: async () => { calls.push('signOut'); return { error: null }; } } };
+  const runtime = canvasRuntime({ client });
+  runtime.GlobalState.user = { id: 'guest-uuid', isGuest: true, isLocalOnly: false };
+  runtime.GlobalState.currentRoom = { id: 'public-room', isLocal: false };
+  runtime.ViewToggle.showScreen = (screen) => calls.push(screen);
+  runtime.RoomController.loadActiveRooms = () => {};
+  runtime.SystemConfigController.loadFeaturedArtwork = () => {};
+  runtime.WorkspaceSyncEngine.clearCanvasLocal = () => {};
+  await runtime.RoomController.handleExitRoom();
+  assert.deepEqual(calls, ['leave_workspace_room', 'lobby']);
+  await runtime.AuthController.handleSignOut();
+  assert.deepEqual(calls, ['leave_workspace_room', 'lobby', 'signOut', 'auth']);
+  assert.equal(runtime.GlobalState.user, null);
 });
 
 test('password recovery survives the Auth SDK clearing the URL fragment', async () => {
