@@ -5,7 +5,9 @@
 ## 이번 수정의 핵심
 
 - 새로고침 뒤 로그인 세션 복구와 실제 로그아웃
-- 게스트의 온라인 기능을 차단하고 로컬 체험 캔버스로 분리
+- 게스트도 익명 인증으로 공개방 공동 그리기·채팅·참여자·신고·커뮤니티 읽기 이용
+- 계정 보관함·게시글/댓글 작성·방 생성·비공개방은 회원에게만 허용
+- 별도 혼자 그리기와 이미지 다운로드는 오프라인에서도 사용
 - 방 비밀번호를 서버의 bcrypt 해시로만 보관
 - 방 생성·입장·강퇴·공개 전환·타이머·관리자 차단을 서버 RPC에서 검증
 - 비공개 Supabase Realtime 채널과 서버 전용 채팅/제어 채널 적용
@@ -27,7 +29,10 @@
 2. `profiles`에서 사이트 소유자 계정 한 명의 `role`을 `admin`으로 지정합니다.
 3. Supabase **Realtime Settings**에서 **Allow public access**를 끕니다.
 4. Authentication의 Site URL과 Redirect URL에 실제 GitHub Pages 주소를 등록합니다.
-5. `npm test`가 모두 통과하는지 확인한 다음 GitHub에 배포합니다.
+5. Authentication → Sign In / Providers에서 **Allow anonymous sign-ins**를 활성화합니다. 공개 Realtime 채널을 다시 켜는 설정과는 별개입니다.
+6. `npm test`가 모두 통과하는지 확인한 다음 GitHub에 배포합니다.
+
+게스트는 Supabase가 발급한 임시 UUID로 식별합니다. 새로고침 시 세션을 재사용하며, 로그아웃 시 종료합니다. 표시 이름이나 브라우저 변수만 바꿔도 회원 전용 기능을 사용할 수 없도록 DB의 `auth.users.is_anonymous`를 확인합니다. SQL 통합 검사는 `tests/guest_access.sql`이며 모든 테스트 데이터는 롤백됩니다. 익명 인증은 Supabase의 기본 IP별 생성 제한을 따릅니다.
 
 마이그레이션은 기존 행을 삭제하지 않습니다. 적용 직전 자료는 접근이 잠긴 `canvas_backup_20260906` 스키마에 보관하며, 예전 방 비밀번호는 원문이 아닌 bcrypt 해시로만 백업·이전됩니다. 기존 `rooms` 테이블은 이전 뒤 모든 클라이언트 권한이 제거됩니다.
 
